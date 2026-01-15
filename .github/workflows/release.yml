@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     branches: [main]
+    paths:
+      - commands/**
+      - config/**
+      - package.json
+      - .releaserc.json
 
 permissions:
   contents: write
