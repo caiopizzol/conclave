@@ -21,16 +21,14 @@ When multiple models flag the same issue, that's a stronger signal than any sing
 ## Installation
 
 ```bash
-# 1. Clone
 git clone https://github.com/caiopizzol/conclave ~/dev/conclave
+cd ~/dev/conclave
+bun run setup
+```
 
-# 2. Symlink command
-ln -sf ~/dev/conclave/commands/review.md ~/.claude/commands/review.md
-
-# 3. Setup config
-mkdir -p ~/.config/conclave
-cp ~/dev/conclave/config/tools.example.json ~/.config/conclave/tools.json
-cp ~/dev/conclave/config/prompt.example.md ~/.config/conclave/prompt.md
+To uninstall:
+```bash
+bun run uninstall
 ```
 
 ## Configuration
@@ -42,13 +40,18 @@ cp ~/dev/conclave/config/prompt.example.md ~/.config/conclave/prompt.md
   "tools": {
     "codex": {
       "enabled": true,
-      "command": "codex exec --ask-for-approval never",
-      "description": "OpenAI Codex"
+      "command": "codex exec --full-auto -",
+      "description": "OpenAI Codex CLI"
     },
-    "claude-opus": {
+    "claude": {
       "enabled": true,
-      "command": "claude --model opus --print",
-      "description": "Claude Opus"
+      "command": "claude --print",
+      "description": "Claude Code"
+    },
+    "gemini": {
+      "enabled": false,
+      "command": "gemini",
+      "description": "Google Gemini CLI"
     }
   },
   "prompt_file": "~/.config/conclave/prompt.md"
