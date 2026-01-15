@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash, Read, Write, Glob, Grep, Task, AskUserQuestion
+allowed-tools: Bash, Read, Write, Glob, Grep, TaskOutput, AskUserQuestion
 description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini) and synthesizes results interactively.
 ---
 
@@ -75,39 +75,33 @@ Replace template variables in the prompt:
 
 If no prompt file exists, use a default review prompt.
 
-### Step 4: Spawn Parallel Review Subagents
+### Step 4: Spawn Parallel Review Commands
 
-For each **enabled** tool in the config, spawn a subagent using the Task tool.
+For each **enabled** tool in the config, run background Bash commands.
 
-**Important**: Launch all subagents in a SINGLE message with multiple Task tool calls to run them in parallel.
+**Important**: Launch all commands in a SINGLE message with multiple Bash tool calls (using `run_in_background: true`) to run them in parallel.
 
-Each subagent should:
-1. Write the review prompt to a temp file (to avoid shell escaping issues)
-2. Pipe or pass the prompt to the CLI tool
-3. Capture and return the review output
+For each tool:
+1. First, write the review prompt to a unique temp file (to avoid shell escaping issues and race conditions)
+2. Then run the CLI tool piping from that file, in background mode
 
-**Subagent prompt template**:
-```
-You are reviewing code using {tool_name} ({tool_description}).
-
-First, write the review prompt to a temp file:
-
+**Step 4a - Write prompt files** (run these in parallel):
 ```bash
-cat > /tmp/conclave-review-prompt.md << 'PROMPT_EOF'
-{review_prompt}
+cat > /tmp/conclave-review-{tool_name}.md << 'PROMPT_EOF'
+{review_prompt_with_variables_replaced}
 PROMPT_EOF
 ```
 
-Then run the review command by piping the prompt via stdin:
-
+**Step 4b - Run review commands in background** (run these in parallel with `run_in_background: true`):
 ```bash
-cat /tmp/conclave-review-prompt.md | {configured_command}
+cat /tmp/conclave-review-{tool_name}.md | {configured_command} 2>&1
 ```
 
-Where {review_prompt} is the custom prompt from config (with {{branch}}, {{target_branch}}, {{diff}} replaced with actual values).
+Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
 
-Return the complete review output from the tool.
-```
+**Step 4c - Wait for all background tasks** using TaskOutput tool:
+- Call TaskOutput for each background task ID
+- This will block until each completes and return the full output
 
 ### Step 5: Collect and Parse Results
 
