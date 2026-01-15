@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⊛ conclave — Full Brand Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Primary */
+      --green-600: #5a9a6b;
+      --green-500: #7cb38b;
+      --green-400: #9ec9a9;
+      --green-300: #c1dbc8;
+      --green-200: #e3f0e6;
+
+      /* Neutral - Warm */
+      --warm-900: #0f0e0c;
+      --warm-850: #151412;
+      --warm-800: #1a1916;
+      --warm-700: #222019;
+      --warm-600: #2d2a25;
+      --warm-500: #3d3935;
+      --warm-400: #5c5750;
+      --warm-300: #8a8478;
+      --warm-200: #b5ae9f;
+      --warm-100: #e8dcc4;
+      --warm-50: #f5f0e6;
+
+      /* Accent */
+      --amber: #c9a962;
+
+      /* Model Colors */
+      --claude: #c9875c;
+      --codex: #7cb38b;
+      --gemini: #6b9ac4;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--warm-900);
+      color: var(--warm-100);
+      font-family: 'Outfit', -apple-system, sans-serif;
+      line-height: 1.6;
+    }
+
+    /* ==========================================
+       SECTION: LANDING HERO
+       ========================================== */
+    .landing {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+      background: linear-gradient(180deg, var(--warm-800) 0%, var(--warm-900) 100%);
+    }
+
+    .hero {
+      text-align: center;
+      max-width: 700px;
+    }
+
+    .hero-logo {
+      font-size: 80px;
+      font-weight: 600;
+      color: var(--warm-100);
+      letter-spacing: -2px;
+      margin-bottom: 8px;
+    }
+
+    .hero-logo .symbol {
+      color: var(--green-500);
+    }
+
+    .hero-tagline {
+      font-size: 24px;
+      color: var(--warm-300);
+      margin-bottom: 16px;
+      font-weight: 400;
+    }
+
+    .hero-description {
+      font-size: 17px;
+      color: var(--warm-400);
+      margin-bottom: 48px;
+      line-height: 1.7;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 32px;
+      background: var(--green-500);
+      color: var(--warm-900);
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .hero-cta:hover {
+      background: var(--green-400);
+      transform: translateY(-2px);
+    }
+
+    .hero-models {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 56px;
+    }
+
+    .hero-model {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--warm-700);
+      border-radius: 24px;
+      font-size: 14px;
+      color: var(--warm-200);
+    }
+
+    .hero-model .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* ==========================================
+       SECTION: CLI PREVIEW
+       ========================================== */
+    .cli-section {
+      padding: 100px 40px;
+      background: var(--warm-900);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--green-500);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 36px;
+      font-weight: 600;
+      color: var(--warm-100);
+      letter-spacing: -0.5px;
+    }
+
+    .cli-window {
+      max-width: 750px;
+      margin: 0 auto;
+      background: var(--warm-800);
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--warm-600);
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    }
+
+    .cli-header {
+      background: var(--warm-700);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--warm-600);
+    }
+
+    .cli-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .cli-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--warm-500);
+    }
+
+    .cli-dot.red { background: #c97070; }
+    .cli-dot.yellow { background: #c9a962; }
+    .cli-dot.green { background: var(--green-500); }
+
+    .cli-title {
+      flex: 1;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--warm-400);
+    }
+
+    .cli-body {
+      padding: 28px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 2;
+    }
+
+    .cli-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cli-prompt {
+      color: var(--green-500);
+    }
+
+    .cli-command {
+      color: var(--warm-100);
+    }
+
+    .cli-output {
+      color: var(--warm-400);
+      padding-left: 20px;
+    }
+
+    .cli-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      background: var(--warm-700);
+      border-radius: 6px;
+      font-size: 11px;
+    }
+
+    .cli-status .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .cli-consensus {
+      color: var(--green-400);
+      background: rgba(124, 179, 139, 0.15);
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+
+    .cli-question {
+      color: var(--warm-200);
+    }
+
+    /* ==========================================
+       SECTION: REVIEW UI
+       ========================================== */
+    .review-section {
+      padding: 100px 40px;
+      background: linear-gradient(180deg, var(--warm-850) 0%, var(--warm-900) 100%);
+    }
+
+    .review-window {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: var(--warm-800);
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid var(--warm-600);
+      box-shadow: 0 30px 100px rgba(0, 0, 0, 0.5);
+    }
+
+    .review-header {
+      background: var(--warm-700);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--warm-600);
+    }
+
+    .review-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .review-logo {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--warm-100);
+    }
+
+    .review-logo .symbol {
+      color: var(--green-500);
+    }
+
+    .review-path {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--warm-400);
+    }
+
+    .review-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .review-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--warm-300);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .review-tab:hover {
+      background: var(--warm-600);
+    }
+
+    .review-tab.active {
+      background: var(--warm-600);
+      color: var(--warm-100);
+    }
+
+    .review-tab .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .review-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 480px;
+    }
+
+    .review-panel {
+      padding: 28px;
+      border-right: 1px solid var(--warm-600);
+    }
+
+    .review-panel:last-child {
+      border-right: none;
+      background: var(--warm-850);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--warm-600);
+    }
+
+    .panel-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--warm-400);
+    }
+
+    .finding {
+      margin-bottom: 20px;
+    }
+
+    .finding-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .finding-badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    .finding-badge.bug {
+      background: rgba(201, 112, 112, 0.2);
+      color: #e8a9a9;
+    }
+
+    .finding-badge.style {
+      background: rgba(107, 154, 196, 0.2);
+      color: #a9c9e8;
+    }
+
+    .finding-badge.perf {
+      background: rgba(201, 169, 98, 0.2);
+      color: #e8d9a9;
+    }
+
+    .finding-text {
+      font-size: 14px;
+      color: var(--warm-100);
+    }
+
+    .finding-ref {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--green-400);
+      background: var(--warm-700);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .finding-desc {
+      font-size: 13px;
+      color: var(--warm-400);
+      margin-top: 8px;
+      padding-left: 0;
+    }
+
+    /* Consensus Card */
+    .consensus-card {
+      background: var(--warm-700);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border-left: 4px solid var(--green-500);
+    }
+
+    .consensus-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .consensus-badge {
+      background: rgba(124, 179, 139, 0.2);
+      color: var(--green-400);
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .consensus-models {
+      display: flex;
+      gap: 4px;
+    }
+
+    .consensus-model {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .consensus-text {
+      font-size: 15px;
+      color: var(--warm-100);
+      margin-bottom: 6px;
+    }
+
+    .consensus-desc {
+      font-size: 13px;
+      color: var(--warm-400);
+    }
+
+    .consensus-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .btn-primary {
+      background: var(--green-500);
+      color: var(--warm-900);
+    }
+
+    .btn-primary:hover {
+      background: var(--green-400);
+    }
+
+    .btn-secondary {
+      background: var(--warm-600);
+      color: var(--warm-300);
+    }
+
+    .btn-secondary:hover {
+      background: var(--warm-500);
+    }
+
+    /* Single model finding (lower priority) */
+    .consensus-card.single {
+      border-left-color: var(--warm-500);
+      opacity: 0.7;
+    }
+
+    .consensus-card.single .consensus-badge {
+      background: var(--warm-600);
+      color: var(--warm-300);
+    }
+
+    /* Review Footer */
+    .review-footer {
+      padding: 20px 28px;
+      background: var(--warm-700);
+      border-top: 1px solid var(--warm-600);
+    }
+
+    .review-input {
+      display: flex;
+      gap: 12px;
+    }
+
+    .input-wrapper {
+      flex: 1;
+      background: var(--warm-800);
+      border: 1px solid var(--warm-600);
+      border-radius: 14px;
+      padding: 14px 20px;
+      transition: all 0.15s;
+    }
+
+    .input-wrapper:focus-within {
+      border-color: var(--green-500);
+    }
+
+    .input-field {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--warm-100);
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .input-field::placeholder {
+      color: var(--warm-500);
+    }
+
+    .send-btn {
+      background: var(--green-500);
+      color: var(--warm-900);
+      border: none;
+      padding: 14px 28px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      transition: all 0.15s;
+    }
+
+    .send-btn:hover {
+      background: var(--green-400);
+    }
+
+    /* ==========================================
+       SECTION: FOOTER
+       ========================================== */
+    .site-footer {
+      padding: 60px 40px;
+      background: var(--warm-900);
+      text-align: center;
+      border-top: 1px solid var(--warm-700);
+    }
+
+    .footer-logo {
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--warm-200);
+      margin-bottom: 12px;
+    }
+
+    .footer-logo .symbol {
+      color: var(--green-500);
+    }
+
+    .footer-tagline {
+      font-size: 15px;
+      color: var(--warm-400);
+      margin-bottom: 32px;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+    }
+
+    .footer-link {
+      font-size: 14px;
+      color: var(--warm-400);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-link:hover {
+      color: var(--green-400);
+    }
+
+    .footer-copy {
+      margin-top: 48px;
+      font-size: 13px;
+      color: var(--warm-500);
+    }
+  </style>
+</head>
+<body>
+  <!-- Landing Hero -->
+  <section class="landing">
+    <div class="hero">
+      <div class="hero-logo"><span class="symbol">⊛</span> conclave</div>
+      <div class="hero-tagline">Run AI code reviews locally, before you push</div>
+      <p class="hero-description">
+        A slash command for Claude Code that runs multiple AI CLIs in parallel.
+        When they agree, it's probably real. When they don't, it might be noise.
+      </p>
+      <a href="https://github.com/caiopizzol/conclave" class="hero-cta">
+        View on GitHub
+        <span>→</span>
+      </a>
+      <div class="hero-models">
+        <div class="hero-model">
+          <div class="dot" style="background: var(--claude);"></div>
+          Claude
+        </div>
+        <div class="hero-model">
+          <div class="dot" style="background: var(--codex);"></div>
+          Codex
+        </div>
+        <div class="hero-model">
+          <div class="dot" style="background: var(--gemini);"></div>
+          Gemini
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLI Preview -->
+  <section class="cli-section">
+    <div class="section-header">
+      <div class="section-label">How it works</div>
+      <div class="section-title">One command, multiple perspectives</div>
+    </div>
+
+    <div class="cli-window">
+      <div class="cli-header">
+        <div class="cli-dots">
+          <div class="cli-dot red"></div>
+          <div class="cli-dot yellow"></div>
+          <div class="cli-dot green"></div>
+        </div>
+        <div class="cli-title">Terminal — ~/dev/my-project</div>
+        <div style="width: 52px;"></div>
+      </div>
+      <div class="cli-body">
+        <div class="cli-line">
+          <span class="cli-prompt">❯</span>
+          <span class="cli-command">/review</span>
+        </div>
+        <br>
+        <div class="cli-output">⊛ conclave — reviewing staged changes</div>
+        <br>
+        <div class="cli-output">
+          <span class="cli-status"><span class="dot" style="background: var(--claude);"></span> Claude</span> reviewing...
+        </div>
+        <div class="cli-output">
+          <span class="cli-status"><span class="dot" style="background: var(--codex);"></span> Codex</span> reviewing...
+        </div>
+        <div class="cli-output">
+          <span class="cli-status"><span class="dot" style="background: var(--gemini);"></span> Gemini</span> reviewing...
+        </div>
+        <br>
+        <div class="cli-output" style="color: var(--green-400);">✓ All reviews complete</div>
+        <br>
+        <div class="cli-output">
+          <span class="cli-consensus">2/3 consensus</span>
+          <span style="color: var(--warm-200);">Race condition in fetchData()</span>
+        </div>
+        <div class="cli-output cli-question">Claude and Codex both flagged this. Fix it? (y/n)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Review UI -->
+  <section class="review-section">
+    <div class="section-header">
+      <div class="section-label">Review interface</div>
+      <div class="section-title">See what matters, skip what doesn't</div>
+    </div>
+
+    <div class="review-window">
+      <div class="review-header">
+        <div class="review-brand">
+          <div class="review-logo"><span class="symbol">⊛</span> conclave</div>
+          <span class="review-path">~/dev/my-project</span>
+        </div>
+        <div class="review-tabs">
+          <div class="review-tab">
+            <div class="dot" style="background: var(--claude);"></div>
+            Claude
+          </div>
+          <div class="review-tab">
+            <div class="dot" style="background: var(--codex);"></div>
+            Codex
+          </div>
+          <div class="review-tab active">
+            <div class="dot" style="background: var(--green-500);"></div>
+            Synthesis
+          </div>
+        </div>
+      </div>
+
+      <div class="review-body">
+        <!-- Left Panel: Individual Review -->
+        <div class="review-panel">
+          <div class="panel-header">
+            <div class="dot" style="background: var(--claude); width: 10px; height: 10px; border-radius: 50%;"></div>
+            <span class="panel-title">Claude</span>
+          </div>
+
+          <div class="finding">
+            <div class="finding-row">
+              <span class="finding-badge bug">Bug</span>
+              <span class="finding-text">Race condition in <span class="finding-ref">fetchData()</span></span>
+            </div>
+            <p class="finding-desc">Async state update after component unmount.</p>
+          </div>
+
+          <div class="finding">
+            <div class="finding-row">
+              <span class="finding-badge bug">Bug</span>
+              <span class="finding-text">Missing error handling at <span class="finding-ref">api.ts:23</span></span>
+            </div>
+            <p class="finding-desc">Network failure not caught.</p>
+          </div>
+
+          <div class="finding">
+            <div class="finding-row">
+              <span class="finding-badge perf">Perf</span>
+              <span class="finding-text">N+1 query in loop at <span class="finding-ref">db.ts:78</span></span>
+            </div>
+            <p class="finding-desc">Consider batching database calls.</p>
+          </div>
+        </div>
+
+        <!-- Right Panel: Synthesis -->
+        <div class="review-panel">
+          <div class="panel-header">
+            <div class="dot" style="background: var(--green-500); width: 10px; height: 10px; border-radius: 50%;"></div>
+            <span class="panel-title">Synthesis</span>
+          </div>
+
+          <div class="consensus-card">
+            <div class="consensus-header">
+              <span class="consensus-badge">2/3 consensus</span>
+              <div class="consensus-models">
+                <div class="consensus-model" style="background: var(--claude);">C</div>
+                <div class="consensus-model" style="background: var(--codex);">O</div>
+              </div>
+            </div>
+            <p class="consensus-text">
+              <span class="finding-badge bug">Bug</span>
+              Race condition in <span class="finding-ref">fetchData()</span>
+            </p>
+            <p class="consensus-desc">Both Claude and Codex flagged this as a potential runtime error.</p>
+            <div class="consensus-actions">
+              <button class="btn btn-primary">Fix this</button>
+              <button class="btn btn-secondary">Not relevant</button>
+            </div>
+          </div>
+
+          <div class="consensus-card single">
+            <div class="consensus-header">
+              <span class="consensus-badge">Only Gemini</span>
+              <div class="consensus-models">
+                <div class="consensus-model" style="background: var(--gemini);">G</div>
+              </div>
+            </div>
+            <p class="consensus-text">
+              <span class="finding-badge perf">Perf</span>
+              Consider caching API responses
+            </p>
+            <p class="consensus-desc">Single model suggestion — may be noise.</p>
+            <div class="consensus-actions">
+              <button class="btn btn-secondary">Investigate</button>
+              <button class="btn btn-secondary">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-footer">
+        <div class="review-input">
+          <div class="input-wrapper">
+            <input type="text" class="input-field" placeholder="Ask about the review or request changes...">
+          </div>
+          <button class="send-btn">Send →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-logo"><span class="symbol">⊛</span> conclave</div>
+    <div class="footer-tagline">Grounded decisions, together</div>
+    <div class="footer-links">
+      <a href="#" class="footer-link">Documentation</a>
+      <a href="#" class="footer-link">GitHub</a>
+      <a href="#" class="footer-link">conclave.sh</a>
+    </div>
+    <div class="footer-copy">© 2026 conclave. MIT License.</div>
+  </footer>
+</body>
+</html>
