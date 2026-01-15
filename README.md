@@ -1,5 +1,6 @@
-
 <img height="200" alt="conclave-logo" src="https://github.com/user-attachments/assets/9bfb9226-fef1-45c8-bc6f-2c0aa98487c5" />
+
+[![GitHub release](https://img.shields.io/github/v/release/caiopizzol/conclave)](https://github.com/caiopizzol/conclave/releases)
 
 Multi-model code review for [Claude Code](https://claude.com/claude-code). Run reviews across multiple AI CLI tools in parallel and get consensus-driven feedback.
 
@@ -27,6 +28,7 @@ bun run register
 ```
 
 To unregister:
+
 ```bash
 bun run unregister
 ```
