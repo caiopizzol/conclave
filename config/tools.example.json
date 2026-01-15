@@ -1,20 +1,20 @@
 {
-  "tools": {
-    "codex": {
-      "enabled": true,
-      "command": "codex exec --ask-for-approval never",
-      "description": "OpenAI Codex CLI"
-    },
-    "claude": {
-      "enabled": true,
-      "command": "claude --print",
-      "description": "Claude Code"
-    },
-    "gemini": {
-      "enabled": false,
-      "command": "gemini",
-      "description": "Google Gemini CLI"
-    }
-  },
-  "prompt_file": "~/.config/conclave/prompt.md"
+	"tools": {
+		"codex": {
+			"enabled": true,
+			"command": "codex exec --full-auto -",
+			"description": "OpenAI Codex CLI"
+		},
+		"claude": {
+			"enabled": true,
+			"command": "claude --print",
+			"description": "Claude Code"
+		},
+		"gemini": {
+			"enabled": false,
+			"command": "gemini",
+			"description": "Google Gemini CLI"
+		}
+	},
+	"prompt_file": "~/.config/conclave/prompt.md"
 }
