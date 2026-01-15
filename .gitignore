@@ -1,3 +1,6 @@
 .DS_Store
 *.log
 dev/
+node_modules/
+dist/
+.env

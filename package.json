@@ -1,0 +1,25 @@
+{
+	"name": "conclave",
+	"version": "0.1.0",
+	"description": "Multi-model code review for Claude Code",
+	"scripts": {
+		"check": "biome check .",
+		"check:fix": "biome check --write .",
+		"format": "biome format --write .",
+		"lint": "biome lint .",
+		"prepare": "lefthook install"
+	},
+	"keywords": [
+		"code-review",
+		"ai",
+		"multi-model",
+		"claude",
+		"codex"
+	],
+	"author": "",
+	"license": "MIT",
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.11",
+		"lefthook": "^2.0.15"
+	}
+}
