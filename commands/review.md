@@ -9,7 +9,21 @@ Review code using multiple AI CLI tools in parallel, then synthesize findings in
 
 ## Workflow
 
-### Step 1: Load Configuration
+### Step 1: Verify Git Repository
+
+First, check if we're in a git repository:
+
+```bash
+git rev-parse --git-dir 2>/dev/null
+```
+
+**If NOT in a git repo**: Stop and tell the user:
+> ⊛ conclave needs to run from a git repository.
+> Navigate to your project directory and run `/review` again.
+
+**Do not proceed** if not in a git repo.
+
+### Step 2: Load Configuration
 
 Read the user's tool configuration:
 
@@ -23,7 +37,7 @@ If the config doesn't exist, inform the user:
 
 Parse the config to determine which tools are enabled.
 
-### Step 2: Gather Context
+### Step 3: Gather Context
 
 Collect git context for template variables:
 
@@ -46,7 +60,7 @@ Get the actual diff content:
 git diff --staged  # or git diff, depending on what's available
 ```
 
-### Step 2b: Build the Review Prompt
+### Step 3b: Build the Review Prompt
 
 Read the prompt template from the file specified in `prompt_file` (default: `~/.config/conclave/prompt.md`):
 
@@ -61,7 +75,7 @@ Replace template variables in the prompt:
 
 If no prompt file exists, use a default review prompt.
 
-### Step 3: Spawn Parallel Review Subagents
+### Step 4: Spawn Parallel Review Subagents
 
 For each **enabled** tool in the config, spawn a subagent using the Task tool.
 
@@ -95,7 +109,7 @@ Where {review_prompt} is the custom prompt from config (with {{branch}}, {{targe
 Return the complete review output from the tool.
 ```
 
-### Step 4: Collect and Parse Results
+### Step 5: Collect and Parse Results
 
 After all subagents complete, collect their outputs. Structure the findings:
 
@@ -112,7 +126,7 @@ After all subagents complete, collect their outputs. Structure the findings:
 [gemini findings]
 ```
 
-### Step 5: Interactive Synthesis
+### Step 6: Interactive Synthesis
 
 Analyze all reviews and engage with the user:
 
@@ -125,7 +139,7 @@ Use AskUserQuestion to engage:
 - "Gemini suggests refactoring the auth module. Is this in scope for this review?"
 - "Some style suggestions were made. Do you want to see those or focus on bugs only?"
 
-### Step 6: Generate Action Items (Optional)
+### Step 7: Generate Action Items (Optional)
 
 If the user wants, generate:
 - A summary of actionable findings
@@ -140,7 +154,7 @@ All tools receive the prompt via stdin: `cat prompt.md | {command}`
 
 | Tool | Default Command | Notes |
 |------|-----------------|-------|
-| Codex | `codex exec --ask-for-approval never` | Reads prompt from stdin |
+| Codex | `codex exec --full-auto -` | `-` reads prompt from stdin, `--full-auto` skips approvals |
 | Claude | `claude --print` | `--print` outputs response without interactive mode |
 | Gemini | `gemini` | Reads prompt from stdin |
 
