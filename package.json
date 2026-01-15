@@ -3,6 +3,8 @@
 	"version": "0.1.0",
 	"description": "Multi-model code review for Claude Code",
 	"scripts": {
+		"setup": "mkdir -p ~/.claude/commands ~/.config/conclave && ln -sf $(pwd)/commands/review.md ~/.claude/commands/review.md && cp -n config/tools.example.json ~/.config/conclave/tools.json 2>/dev/null || true && cp -n config/prompt.example.md ~/.config/conclave/prompt.md 2>/dev/null || true && echo '⊛ conclave installed'",
+		"uninstall": "rm -f ~/.claude/commands/review.md && echo '⊛ conclave uninstalled (config preserved at ~/.config/conclave)'",
 		"check": "biome check .",
 		"check:fix": "biome check --write .",
 		"format": "biome format --write .",
