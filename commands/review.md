@@ -18,6 +18,7 @@ git rev-parse --git-dir 2>/dev/null
 ```
 
 **If NOT in a git repo**: Stop and tell the user:
+
 > ⊛ conclave needs to run from a git repository.
 > Navigate to your project directory and run `/review` again.
 
@@ -32,6 +33,7 @@ cat ~/.config/conclave/tools.json
 ```
 
 If the config doesn't exist, inform the user:
+
 > No config found at `~/.config/conclave/tools.json`.
 > Run: `mkdir -p ~/.config/conclave && cp ~/dev/conclave/config/tools.example.json ~/.config/conclave/tools.json`
 
@@ -56,6 +58,7 @@ Check for command arguments. If files were specified, use those. Otherwise:
 3. If no changes, ask the user what to review
 
 Get the actual diff content:
+
 ```bash
 git diff --staged  # or git diff, depending on what's available
 ```
@@ -69,6 +72,7 @@ cat ~/.config/conclave/prompt.md
 ```
 
 Replace template variables in the prompt:
+
 - `{{branch}}` - current branch name
 - `{{target_branch}}` - target branch (e.g., origin/main)
 - `{{diff}}` - the full diff content
@@ -82,10 +86,12 @@ For each **enabled** tool in the config, run background Bash commands.
 **Important**: Launch all commands in a SINGLE message with multiple Bash tool calls (using `run_in_background: true`) to run them in parallel.
 
 For each tool:
+
 1. First, write the review prompt to a unique temp file (to avoid shell escaping issues and race conditions)
 2. Then run the CLI tool piping from that file, in background mode
 
 **Step 4a - Write prompt files** (run these in parallel):
+
 ```bash
 cat > /tmp/conclave-review-{tool_name}.md << 'PROMPT_EOF'
 {review_prompt_with_variables_replaced}
@@ -93,6 +99,7 @@ PROMPT_EOF
 ```
 
 **Step 4b - Run review commands in background** (run these in parallel with `run_in_background: true`):
+
 ```bash
 cat /tmp/conclave-review-{tool_name}.md | {configured_command} 2>&1
 ```
@@ -100,6 +107,7 @@ cat /tmp/conclave-review-{tool_name}.md | {configured_command} 2>&1
 Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
 
 **Step 4c - Wait for all background tasks** using TaskOutput tool:
+
 - Call TaskOutput for each background task ID
 - This will block until each completes and return the full output
 
@@ -129,6 +137,7 @@ Analyze all reviews and engage with the user:
 3. **Highlight disagreements** - Where tools differ, present both perspectives
 
 Use AskUserQuestion to engage:
+
 - "Codex and Claude both flagged a potential null reference at line 42. Should I create a fix?"
 - "Gemini suggests refactoring the auth module. Is this in scope for this review?"
 - "Some style suggestions were made. Do you want to see those or focus on bugs only?"
@@ -136,6 +145,7 @@ Use AskUserQuestion to engage:
 ### Step 7: Generate Action Items (Optional)
 
 If the user wants, generate:
+
 - A summary of actionable findings
 - Suggested fixes for critical issues
 - A checklist of items to address
@@ -146,11 +156,11 @@ If the user wants, generate:
 
 All tools receive the prompt via stdin: `cat prompt.md | {command}`
 
-| Tool | Default Command | Notes |
-|------|-----------------|-------|
-| Codex | `codex exec --full-auto -` | `-` reads prompt from stdin, `--full-auto` skips approvals |
-| Claude | `claude --print` | `--print` outputs response without interactive mode |
-| Gemini | `gemini` | Reads prompt from stdin |
+| Tool   | Default Command            | Notes                                                      |
+| ------ | -------------------------- | ---------------------------------------------------------- |
+| Codex  | `codex exec --full-auto -` | `-` reads prompt from stdin, `--full-auto` skips approvals |
+| Claude | `claude --print`           | `--print` outputs response without interactive mode        |
+| Gemini | `gemini`                   | Reads prompt from stdin                                    |
 
 **Note**: Each parallel subagent should use a unique temp file (e.g., `/tmp/conclave-review-{tool}.md`) to avoid race conditions.
 
