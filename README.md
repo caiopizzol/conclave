@@ -23,12 +23,12 @@ When multiple models flag the same issue, that's a stronger signal than any sing
 ```bash
 git clone https://github.com/caiopizzol/conclave ~/dev/conclave
 cd ~/dev/conclave
-bun run setup
+bun run link
 ```
 
-To uninstall:
+To unlink:
 ```bash
-bun run uninstall
+bun run unlink
 ```
 
 ## Configuration
