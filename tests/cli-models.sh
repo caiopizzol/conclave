@@ -121,10 +121,8 @@ echo ""
 echo "--- Ollama (Coder Models) ---"
 test_model "ollama" "codegemma:7b" "ollama run codegemma:7b" true                  
 test_model "ollama" "codellama:7b" "ollama run codellama:7b" true
-test_model "ollama" "deepseek-coder:6.7b" "ollama run deepseek-coder:6.7b" true   
-test_model "ollama" "starcoder2:7b" "ollama run starcoder2:7b" true
-test_model "ollama" "qwen2.5-coder:7b" "ollama run qwen2.5-coder:7b" true 
-test_model "ollama" "qwen3-coder:30b" "ollama run qwen3-coder:30b" true            
+test_model "ollama" "deepseek-coder:6.7b" "ollama run deepseek-coder:6.7b" true
+test_model "ollama" "qwen2.5-coder:7b" "ollama run qwen2.5-coder:7b" true
 echo ""
 
 echo "======================"

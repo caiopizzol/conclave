@@ -107,9 +107,9 @@ The `model` field is optional for most tools. If omitted, each tool uses its def
 | Gemini  | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview`                                         | [Gemini CLI](https://geminicli.com/docs/cli/model/)            |
 | Qwen    | `coder-model` (default), `vision-model`                                                                                        | [Qwen Code Docs](https://qwenlm.github.io/qwen-code-docs/)     |
 | Mistral | Config-based (`~/.vibe/config.toml`)                                                                                           | [Mistral Vibe Docs](https://docs.mistral.ai/mistral-vibe/)     |
-| Ollama  | `qwen2.5-coder:7b`, `qwen3-coder:30b`, `codellama:7b`, `deepseek-coder:6.7b`, `codegemma:7b`, `starcoder2:7b` | [Ollama Library](https://ollama.com/search?c=code)             |
+| Ollama  | `qwen2.5-coder:7b`, `codellama:7b`, `deepseek-coder:6.7b`, `codegemma:7b` | [Ollama Library](https://ollama.com/search?c=code)             |
 
-> **Note:** Ollama models use `:tag` syntax for parameter sizes (e.g., `qwen2.5-coder:7b`). Larger models need more RAM: 7B ≈ 8GB, 13B ≈ 16GB, 30B+ ≈ 32GB+. MoE models like `qwen3-coder:30b` are more efficient (only 3.3B params active).
+> **Note:** Ollama models use `:tag` syntax for parameter sizes (e.g., `qwen2.5-coder:7b`). 7B models need ~8GB RAM.
 
 > **Note:** Mistral uses command-line argument passing (not stdin), which has a ~200KB limit on macOS. Very large diffs may cause Mistral to fail while other tools succeed.
 
