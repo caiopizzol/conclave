@@ -1,6 +1,6 @@
 {
 	"name": "conclave",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Multi-model code review for Claude Code",
 	"scripts": {
 		"register": "mkdir -p ~/.claude/commands ~/.claude/agents ~/.config/conclave && ln -sf $(pwd)/commands/review.md ~/.claude/commands/review.md && ln -sf $(pwd)/agents/review-investigator.md ~/.claude/agents/review-investigator.md && cp -n config/tools.example.json ~/.config/conclave/tools.json 2>/dev/null || true && cp -n config/prompt.example.md ~/.config/conclave/prompt.md 2>/dev/null || true && echo '⊛ conclave registered'",
