@@ -3,6 +3,8 @@ name: Deploy Page
 on:
   push:
     branches: [main]
+    paths:
+      - index.html
   workflow_dispatch:
 
 permissions:
