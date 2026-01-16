@@ -7,6 +7,7 @@ on:
     paths:
       - commands/**
       - config/**
+      - tests/**
       - package.json
       - .releaserc.json
 
@@ -31,6 +32,10 @@ jobs:
           node-version: 22
 
       - run: bun install
+
+      - run: bun run check
+
+      - run: bun run test:tools
 
       - run: bun run release
         env:
