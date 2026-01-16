@@ -5,7 +5,7 @@
 # WARNING: This runs real API calls and incurs costs.
 # Only run when you need to verify tools are working end-to-end.
 #
-# NOTE: Ollama models must be pulled locally first (e.g., `ollama pull qwen2.5-coder:7b`).
+# NOTE: Ollama cloud models require OLLAMA_API_KEY environment variable.
 
 set -eo pipefail
 
@@ -88,7 +88,14 @@ test_tool "claude" "claude --print" true
 test_tool "gemini" "gemini -o text" true
 test_tool "qwen" "qwen -o text" true
 test_tool "mistral" "vibe --output text -p" false
-test_tool "ollama" "ollama run $MODEL_OLLAMA" true
+# Skip ollama cloud models if API key not set
+if [[ "$MODEL_OLLAMA" == *"-cloud"* ]] && [[ -z "$OLLAMA_API_KEY" ]]; then
+    echo "Testing ollama..."
+    echo "  ○ ollama skipped (cloud model requires OLLAMA_API_KEY)"
+    ((skipped++))
+else
+    test_tool "ollama" "ollama run $MODEL_OLLAMA" true
+fi
 
 echo ""
 echo "Results: $passed passed, $failed failed, $skipped skipped"

@@ -14,7 +14,7 @@ Multi-model code review for [Claude Code](https://claude.com/claude-code). Run r
    ├── Gemini ───────► reviews independently
    ├── Qwen Code ────► reviews independently
    ├── Mistral Vibe ─► reviews independently
-   └── Ollama ───────► reviews independently (local)
+   └── Ollama ────────► reviews independently
    └── Grok Build ───► coming soon
 
    ▼
@@ -83,11 +83,23 @@ bun run unregister
       "command": "vibe --output text -p",
       "description": "Mistral Vibe (Devstral)"
     },
-    "ollama": {
+    "ollama-qwen": {
+      "enabled": false,
+      "command": "ollama run",
+      "model": "qwen3-coder:480b-cloud",
+      "description": "Ollama (Qwen3 Coder 480B)"
+    },
+    "ollama-devstral": {
+      "enabled": false,
+      "command": "ollama run",
+      "model": "devstral-2:123b-cloud",
+      "description": "Ollama (Devstral 2 123B)"
+    },
+    "ollama-local": {
       "enabled": false,
       "command": "ollama run",
       "model": "qwen2.5-coder:7b",
-      "description": "Ollama local models"
+      "description": "Ollama (Qwen 2.5 Coder 7B, local)"
     }
   },
   "prompt_file": "~/.config/conclave/prompt.md"
@@ -107,9 +119,9 @@ The `model` field is optional for most tools. If omitted, each tool uses its def
 | Gemini  | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview`                                         | [Gemini CLI](https://geminicli.com/docs/cli/model/)            |
 | Qwen    | `coder-model` (default), `vision-model`                                                                                        | [Qwen Code Docs](https://qwenlm.github.io/qwen-code-docs/)     |
 | Mistral | Config-based (`~/.vibe/config.toml`)                                                                                           | [Mistral Vibe Docs](https://docs.mistral.ai/mistral-vibe/)     |
-| Ollama  | `qwen2.5-coder:7b`, `codellama:7b`, `deepseek-coder:6.7b`, `codegemma:7b` | [Ollama Library](https://ollama.com/search?c=code)             |
+| Ollama  | `qwen3-coder:480b-cloud`, `devstral-2:123b-cloud`, or any model from library | [Ollama Library](https://ollama.com/library) |
 
-> **Note:** Ollama models use `:tag` syntax for parameter sizes (e.g., `qwen2.5-coder:7b`). 7B models need ~8GB RAM.
+> **Note:** Ollama cloud models use `:cloud` suffix and require `OLLAMA_API_KEY` environment variable. Get your API key at [ollama.com](https://ollama.com). You can also run local models (e.g., `qwen2.5-coder:7b`), but they are slow and require significant memory (~8GB+ RAM for 7B models).
 
 > **Note:** Mistral uses command-line argument passing (not stdin), which has a ~200KB limit on macOS. Very large diffs may cause Mistral to fail while other tools succeed.
 
@@ -130,7 +142,7 @@ Customize review instructions with template variables:
 | Gemini  | `npm install -g @google/gemini-cli`                                           |
 | Qwen    | `npm install -g @qwen-code/qwen-code`                                         |
 | Mistral | `pipx install mistral-vibe`                                                   |
-| Ollama  | [ollama.com/download](https://ollama.com/download) then `ollama pull <model>` |
+| Ollama  | [ollama.com/download](https://ollama.com/download); cloud: `export OLLAMA_API_KEY="key"` in `~/.zshrc`; local: `ollama pull <model>` |
 
 ## Usage
 

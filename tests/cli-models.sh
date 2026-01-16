@@ -5,8 +5,8 @@
 # WARNING: This runs many API calls (one per model) and incurs significant costs.
 # Only run when validating README model documentation is accurate.
 #
-# NOTE: Ollama models must be pulled locally first (e.g., `ollama pull qwen2.5-coder:7b`).
-# If not pulled, ollama will attempt to download them, which can be slow and cause timeouts.
+# NOTE: Ollama cloud models (`:cloud` suffix) require OLLAMA_API_KEY environment variable.
+# Get your API key at https://ollama.com
 
 set -eo pipefail
 
@@ -116,12 +116,16 @@ echo "--- Mistral ---"
 test_model "mistral" "default" "vibe --output text -p" false
 echo ""
 
-# Ollama coder models (popular models from ollama.com/library, requires models to be pulled first)
-# See: https://ollama.com/search?c=code
-echo "--- Ollama (Coder Models) ---"
-test_model "ollama" "codegemma:7b" "ollama run codegemma:7b" true                  
-test_model "ollama" "codellama:7b" "ollama run codellama:7b" true
-test_model "ollama" "deepseek-coder:6.7b" "ollama run deepseek-coder:6.7b" true
+# Ollama models
+# Cloud models require OLLAMA_API_KEY, local models must be pulled first
+echo "--- Ollama ---"
+if [[ -n "$OLLAMA_API_KEY" ]]; then
+    test_model "ollama" "qwen3-coder:480b-cloud" "ollama run qwen3-coder:480b-cloud" true
+    test_model "ollama" "devstral-2:123b-cloud" "ollama run devstral-2:123b-cloud" true
+else
+    echo "  ○ cloud models skipped (OLLAMA_API_KEY not set)"
+    ((skipped+=2))
+fi
 test_model "ollama" "qwen2.5-coder:7b" "ollama run qwen2.5-coder:7b" true
 echo ""
 
