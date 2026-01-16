@@ -43,22 +43,42 @@ bun run unregister
     "codex": {
       "enabled": true,
       "command": "codex exec --full-auto -",
+      "model": "gpt-5.2-codex",
       "description": "OpenAI Codex CLI"
     },
-    "claude": {
+    "claude-opus": {
       "enabled": true,
       "command": "claude --print",
-      "description": "Claude Code"
+      "model": "opus",
+      "description": "Claude Code (Opus)"
+    },
+    "claude-sonnet": {
+      "enabled": false,
+      "command": "claude --print",
+      "model": "sonnet",
+      "description": "Claude Code (Sonnet)"
     },
     "gemini": {
       "enabled": false,
       "command": "gemini",
-      "description": "Google Gemini CLI"
+      "description": "Google Gemini CLI (uses default model)"
     }
   },
   "prompt_file": "~/.config/conclave/prompt.md"
 }
 ```
+
+You can define multiple entries for the same provider with different models (e.g., `claude-opus` and `claude-sonnet`).
+
+The `model` field is optional. If omitted, each tool uses its default model.
+
+**Supported models:**
+
+| Tool   | Models                                                                               | Documentation                                                |
+| ------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Codex  | `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`, `gpt-5.2`                | [Codex Models](https://developers.openai.com/codex/models/)  |
+| Claude | `opus`, `sonnet`, `haiku` (aliases) or full names like `claude-opus-4-5-20251101`    | [CLI Reference](https://code.claude.com/docs/en/cli-reference) |
+| Gemini | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview` | [Gemini CLI](https://geminicli.com/docs/cli/model/)          |
 
 ### Prompt (`~/.config/conclave/prompt.md`)
 

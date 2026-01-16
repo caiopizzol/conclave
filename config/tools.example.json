@@ -3,17 +3,25 @@
 		"codex": {
 			"enabled": true,
 			"command": "codex exec --full-auto -",
+			"model": "gpt-5.2-codex",
 			"description": "OpenAI Codex CLI"
 		},
-		"claude": {
+		"claude-opus": {
 			"enabled": true,
 			"command": "claude --print",
-			"description": "Claude Code"
+			"model": "opus",
+			"description": "Claude Code (Opus)"
+		},
+		"claude-sonnet": {
+			"enabled": false,
+			"command": "claude --print",
+			"model": "sonnet",
+			"description": "Claude Code (Sonnet)"
 		},
 		"gemini": {
 			"enabled": false,
 			"command": "gemini",
-			"description": "Google Gemini CLI"
+			"description": "Google Gemini CLI (uses default model)"
 		}
 	},
 	"prompt_file": "~/.config/conclave/prompt.md"

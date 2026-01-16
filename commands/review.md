@@ -37,7 +37,12 @@ If the config doesn't exist, inform the user:
 > No config found at `~/.config/conclave/tools.json`.
 > Run: `mkdir -p ~/.config/conclave && cp ~/dev/conclave/config/tools.example.json ~/.config/conclave/tools.json`
 
-Parse the config to determine which tools are enabled.
+Parse the config to determine which tools are enabled. Each tool can have:
+
+- `enabled` (required) - whether to use this tool
+- `command` (required) - the CLI command to run
+- `model` (optional) - specific model to use (injected via `--model` or `-m` flag)
+- `description` (optional) - human-readable description
 
 ### Step 3: Gather Context
 
@@ -78,6 +83,7 @@ git diff -- \
 ```
 
 **Excluded files** (auto-generated, not useful to review):
+
 - Lock files: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lockb`, `bun.lock`, `Cargo.lock`, `Gemfile.lock`, `composer.lock`, `poetry.lock`, `Pipfile.lock`, `go.sum`, `pubspec.lock`, `flake.lock`, `shrinkwrap.json`
 - Yarn PnP: `.pnp.cjs`, `.pnp.loader.mjs`
 - Minified assets: `*.min.js`, `*.min.css`, `*.map`
@@ -120,7 +126,36 @@ PROMPT_EOF
 **Step 4b - Run review commands in background** (run these in parallel with `run_in_background: true`):
 
 ```bash
-cat /tmp/conclave-review-{tool_name}.md | {configured_command} 2>&1
+cat /tmp/conclave-review-{tool_name}.md | {final_command} 2>&1
+```
+
+**Model Flag Injection**: If a tool has a `model` field specified, inject the model flag into the command:
+
+| Tool   | Model Flag | Injection Point             |
+| ------ | ---------- | --------------------------- |
+| codex  | `-m`       | Before the `-` stdin marker |
+| claude | `--model`  | Appended to command         |
+| gemini | `-m`       | Appended to command         |
+
+**Notes**:
+- Codex model injection requires the command to end with ` -` (stdin marker). If the command doesn't end with ` -`, skip model injection for that tool.
+- Model values should be simple identifiers (alphanumeric, dots, dashes). Do not include shell metacharacters.
+- If the user's command already includes a model flag (`-m` or `--model`), skip model injection to avoid duplicate flags.
+
+Command construction examples:
+
+```
+# Codex (model flag goes BEFORE the trailing `-`)
+Original: codex exec --full-auto -
+With model: codex exec --full-auto -m gpt-5.2-codex -
+
+# Claude (model flag appended)
+Original: claude --print
+With model: claude --print --model claude-opus-4-5-20251101
+
+# Gemini (model flag appended)
+Original: gemini
+With model: gemini -m gemini-2.5-pro
 ```
 
 Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
@@ -239,11 +274,11 @@ If the user wants, generate:
 
 All tools receive the prompt via stdin: `cat prompt.md | {command}`
 
-| Tool   | Default Command            | Notes                                                      |
-| ------ | -------------------------- | ---------------------------------------------------------- |
-| Codex  | `codex exec --full-auto -` | `-` reads prompt from stdin, `--full-auto` skips approvals |
-| Claude | `claude --print`           | `--print` outputs response without interactive mode        |
-| Gemini | `gemini`                   | Reads prompt from stdin                                    |
+| Tool   | Default Command            | Model Flag               | Notes                                                      |
+| ------ | -------------------------- | ------------------------ | ---------------------------------------------------------- |
+| Codex  | `codex exec --full-auto -` | `-m` (insert before `-`) | `-` reads prompt from stdin, `--full-auto` skips approvals |
+| Claude | `claude --print`           | `--model` (append)       | `--print` outputs response without interactive mode        |
+| Gemini | `gemini`                   | `-m` (append)            | Reads prompt from stdin                                    |
 
 **Note**: Each parallel subagent should use a unique temp file (e.g., `/tmp/conclave-review-{tool}.md`) to avoid race conditions.
 
