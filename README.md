@@ -23,6 +23,10 @@ When multiple models flag the same issue, that's a stronger signal than any sing
 
 Enable/disable any combination of tools to get diverse perspectives from different training datasets.
 
+## Inspiration
+
+Inspired by [LLM Council](https://github.com/karpathy/llm-council) — the idea that multiple LLMs reviewing the same problem surfaces stronger signals than any single model.
+
 ## Installation
 
 ```bash
