@@ -128,9 +128,73 @@ After all subagents complete, collect their outputs. Structure the findings:
 [gemini findings]
 ```
 
-### Step 6: Interactive Synthesis
+### Step 5.5: Deep Investigation
 
-Analyze all reviews and engage with the user:
+After collecting results, present a summary to the user and offer investigation.
+
+First, show a brief overview:
+
+```
+=== Review Summary ===
+Tools: [list of tools that responded]
+Issues found: [count]
+Consensus items: [count of issues flagged by 2+ tools]
+```
+
+Then use AskUserQuestion:
+
+"Want me to investigate each issue and draft PR comments?"
+
+**If user opts in**, launch the `review-investigator` sub-agent using the Task tool:
+
+```
+subagent_type: review-investigator
+prompt: |
+  Investigate these code review findings and draft comments:
+
+  **Diff Context**:
+  [the diff being reviewed]
+
+  **Issues Found**:
+  1. [Issue from Tool A] - Line X: description
+  2. [Issue from Tool B] - Line Y: description (CONSENSUS if flagged by multiple)
+  ...
+
+  For each issue:
+  1. Read the relevant code to understand context
+  2. Explain why this is (or isn't) a real problem
+  3. Draft a comment
+
+  Output plain text, no markdown, no emojis, no AI-speak.
+```
+
+Wait for the investigator to complete, then proceed to Step 6 with the investigation results.
+
+**If user declines**, skip to Step 6 with just the raw review summaries.
+
+### Step 6: Present Results for Approval
+
+If investigation was performed, present each issue with its drafted comment:
+
+```
+=== Issues Found (N total) ===
+
+[CRITICAL] Line X - Issue title
+Draft: "the drafted comment"
+→ Post this comment? [y/n/edit]
+
+[MEDIUM] Line Y - Issue title
+Draft: "the drafted comment"
+→ Post this comment? [y/n/edit]
+
+[LOW] Line Z - Issue title
+Draft: "the drafted comment"
+→ Post this comment? [y/n/edit]
+```
+
+Use AskUserQuestion to let the user approve, skip, or edit each comment.
+
+If no investigation was performed, fall back to the standard synthesis:
 
 1. **Identify consensus** - Issues flagged by multiple tools are likely real problems
 2. **Group by category** - bugs, security, performance, style
