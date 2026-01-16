@@ -13,7 +13,8 @@ Multi-model code review for [Claude Code](https://claude.com/claude-code). Run r
    ├── Codex ────────► reviews independently
    ├── Gemini ───────► reviews independently
    ├── Qwen Code ────► reviews independently
-   └── Mistral Vibe ─► reviews independently
+   ├── Mistral Vibe ─► reviews independently
+   └── Ollama ───────► reviews independently (local)
 
    ▼
    Synthesis: consensus highlighted, noise filtered
@@ -79,7 +80,13 @@ bun run unregister
     "mistral": {
       "enabled": false,
       "command": "vibe --output text -p",
-      "description": "Mistral Vibe (Devstral) - uses command substitution"
+      "description": "Mistral Vibe (Devstral)"
+    },
+    "ollama": {
+      "enabled": false,
+      "command": "ollama run",
+      "model": "qwen2.5-coder:7b",
+      "description": "Ollama local models"
     }
   },
   "prompt_file": "~/.config/conclave/prompt.md"
@@ -88,17 +95,20 @@ bun run unregister
 
 You can define multiple entries for the same provider with different models (e.g., `claude-opus` and `claude-sonnet`).
 
-The `model` field is optional. If omitted, each tool uses its default model.
+The `model` field is optional for most tools. If omitted, each tool uses its default model. **Exception:** Ollama requires an explicit `model` since it has no default.
 
 **Supported models:**
 
-| Tool     | Models                                                                                 | Documentation                                                    |
-| -------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Codex    | `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`, `gpt-5.2`                  | [Codex Models](https://developers.openai.com/codex/models/)      |
-| Claude   | `opus`, `sonnet`, `haiku` (aliases) or full names like `claude-opus-4-5-20251101`      | [CLI Reference](https://code.claude.com/docs/en/cli-reference)   |
-| Gemini   | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview` | [Gemini CLI](https://geminicli.com/docs/cli/model/)              |
-| Qwen     | `coder-model` (default), `vision-model`                                                | [Qwen Code Docs](https://qwenlm.github.io/qwen-code-docs/)       |
-| Mistral  | Config-based (`~/.vibe/config.toml`)                                                   | [Mistral Vibe Docs](https://docs.mistral.ai/mistral-vibe/)       |
+| Tool    | Models                                                                                                                         | Documentation                                                  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| Codex   | `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`, `gpt-5.2`                                                          | [Codex Models](https://developers.openai.com/codex/models/)    |
+| Claude  | `opus`, `sonnet`, `haiku` (aliases) or full names like `claude-opus-4-5-20251101`                                              | [CLI Reference](https://code.claude.com/docs/en/cli-reference) |
+| Gemini  | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview`                                         | [Gemini CLI](https://geminicli.com/docs/cli/model/)            |
+| Qwen    | `coder-model` (default), `vision-model`                                                                                        | [Qwen Code Docs](https://qwenlm.github.io/qwen-code-docs/)     |
+| Mistral | Config-based (`~/.vibe/config.toml`)                                                                                           | [Mistral Vibe Docs](https://docs.mistral.ai/mistral-vibe/)     |
+| Ollama  | `qwen2.5-coder:7b`, `qwen3-coder:30b`, `codellama:7b`, `deepseek-coder:6.7b`, `codegemma:7b`, `starcoder2:7b` | [Ollama Library](https://ollama.com/search?c=code)             |
+
+> **Note:** Ollama models use `:tag` syntax for parameter sizes (e.g., `qwen2.5-coder:7b`). Larger models need more RAM: 7B ≈ 8GB, 13B ≈ 16GB, 30B+ ≈ 32GB+. MoE models like `qwen3-coder:30b` are more efficient (only 3.3B params active).
 
 > **Note:** Mistral uses command-line argument passing (not stdin), which has a ~200KB limit on macOS. Very large diffs may cause Mistral to fail while other tools succeed.
 
@@ -112,13 +122,14 @@ Customize review instructions with template variables:
 
 ### Authentication
 
-| Tool     | Install                              |
-| -------- | ------------------------------------ |
-| Codex    | `npm install -g @openai/codex`       |
-| Claude   | Built-in                             |
-| Gemini   | `npm install -g @google/gemini-cli`  |
-| Qwen     | `npm install -g @qwen-code/qwen-code` |
-| Mistral  | `pipx install mistral-vibe`          |
+| Tool    | Install                                                                       |
+| ------- | ----------------------------------------------------------------------------- |
+| Codex   | `npm install -g @openai/codex`                                                |
+| Claude  | Built-in                                                                      |
+| Gemini  | `npm install -g @google/gemini-cli`                                           |
+| Qwen    | `npm install -g @qwen-code/qwen-code`                                         |
+| Mistral | `pipx install mistral-vibe`                                                   |
+| Ollama  | [ollama.com/download](https://ollama.com/download) then `ollama pull <model>` |
 
 ## Usage
 

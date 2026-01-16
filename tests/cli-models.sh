@@ -4,6 +4,9 @@
 #
 # WARNING: This runs many API calls (one per model) and incurs significant costs.
 # Only run when validating README model documentation is accurate.
+#
+# NOTE: Ollama models must be pulled locally first (e.g., `ollama pull qwen2.5-coder:7b`).
+# If not pulled, ollama will attempt to download them, which can be slow and cause timeouts.
 
 set -eo pipefail
 
@@ -111,6 +114,17 @@ echo ""
 # Mistral (1 - config-based)
 echo "--- Mistral ---"
 test_model "mistral" "default" "vibe --output text -p" false
+echo ""
+
+# Ollama coder models (popular models from ollama.com/library, requires models to be pulled first)
+# See: https://ollama.com/search?c=code
+echo "--- Ollama (Coder Models) ---"
+test_model "ollama" "codegemma:7b" "ollama run codegemma:7b" true                  
+test_model "ollama" "codellama:7b" "ollama run codellama:7b" true
+test_model "ollama" "deepseek-coder:6.7b" "ollama run deepseek-coder:6.7b" true   
+test_model "ollama" "starcoder2:7b" "ollama run starcoder2:7b" true
+test_model "ollama" "qwen2.5-coder:7b" "ollama run qwen2.5-coder:7b" true 
+test_model "ollama" "qwen3-coder:30b" "ollama run qwen3-coder:30b" true            
 echo ""
 
 echo "======================"

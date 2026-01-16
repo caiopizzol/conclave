@@ -8,7 +8,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 CONFIG_FILE="$PROJECT_ROOT/config/tools.example.json"
 
 # Tools used by conclave
-TOOLS=(codex claude gemini qwen vibe jq)
+TOOLS=(codex claude gemini qwen vibe ollama jq)
 
 echo "Checking CLI tools..."
 missing=()

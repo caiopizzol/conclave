@@ -4,6 +4,8 @@
 #
 # WARNING: This runs real API calls and incurs costs.
 # Only run when you need to verify tools are working end-to-end.
+#
+# NOTE: Ollama models must be pulled locally first (e.g., `ollama pull qwen2.5-coder:7b`).
 
 set -eo pipefail
 
@@ -21,9 +23,8 @@ else
     exit 1
 fi
 
-# Model overrides via environment variables
-MODEL_CODEX="${MODEL_CODEX:-gpt-5.2-codex}"
-MODEL_CLAUDE="${MODEL_CLAUDE:-sonnet}"
+# Model overrides
+MODEL_OLLAMA="${MODEL_OLLAMA:-qwen2.5-coder:7b}"
 
 passed=0
 failed=0
@@ -82,11 +83,12 @@ echo "Timeout: ${TIMEOUT}s per tool"
 echo ""
 
 # Test each tool with model flags where applicable
-test_tool "codex" "codex exec --full-auto -m $MODEL_CODEX -" true
-test_tool "claude" "claude --print --model $MODEL_CLAUDE" true
+test_tool "codex" "codex exec --full-auto" true
+test_tool "claude" "claude --print" true
 test_tool "gemini" "gemini -o text" true
 test_tool "qwen" "qwen -o text" true
 test_tool "mistral" "vibe --output text -p" false
+test_tool "ollama" "ollama run $MODEL_OLLAMA" true
 
 echo ""
 echo "Results: $passed passed, $failed failed, $skipped skipped"

@@ -31,7 +31,13 @@
 		"mistral": {
 			"enabled": false,
 			"command": "vibe --output text -p",
-			"description": "Mistral Vibe (Devstral) - uses command substitution instead of stdin"
+			"description": "Mistral Vibe (Devstral)"
+		},
+		"ollama": {
+			"enabled": false,
+			"command": "ollama run",
+			"model": "qwen2.5-coder:7b",
+			"description": "Ollama local models"
 		}
 	},
 	"prompt_file": "~/.config/conclave/prompt.md"

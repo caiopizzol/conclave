@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash, Read, Write, Glob, Grep, TaskOutput, AskUserQuestion
-description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini, Qwen, Mistral) and synthesizes results interactively.
+description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini, Qwen, Mistral, Ollama) and synthesizes results interactively.
 ---
 
 # Multi-Model Code Review
@@ -144,6 +144,7 @@ For Mistral Vibe (command substitution - does not accept stdin):
 | gemini   | `-m`       | Appended to command         |
 | qwen     | `-m`       | Appended to command         |
 | mistral  | N/A        | Model set via `~/.vibe/config.toml` |
+| ollama   | N/A        | Appended directly (no flag) |
 
 **Notes**:
 - Codex model injection requires the command to end with ` -` (stdin marker). If the command doesn't end with ` -`, skip model injection for that tool.
@@ -172,6 +173,10 @@ With model: qwen -o text -m coder-model
 # Mistral (no model flag - configured via ~/.vibe/config.toml)
 # Uses command substitution instead of stdin:
 vibe --output text -p "$(cat /tmp/conclave-review-mistral.md)"
+
+# Ollama (model appended directly, no flag)
+Original: ollama run
+With model: ollama run qwen2.5-coder:7b
 ```
 
 Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
@@ -297,6 +302,7 @@ Most tools receive the prompt via stdin: `cat prompt.md | {command}`
 | Gemini   | `gemini -o text`                   | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
 | Qwen     | `qwen -o text`                     | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
 | Mistral  | `vibe --output text -p`            | Config-based             | Uses command substitution: `vibe --output text -p "$(cat file)"` |
+| Ollama   | `ollama run`                       | Appended directly        | Model appended without flag: `ollama run <model>`          |
 
 **Notes**:
 - Each parallel subagent should use a unique temp file (e.g., `/tmp/conclave-review-{tool}.md`) to avoid race conditions.
