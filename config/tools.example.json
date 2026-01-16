@@ -20,8 +20,18 @@
 		},
 		"gemini": {
 			"enabled": false,
-			"command": "gemini",
+			"command": "gemini -o text",
 			"description": "Google Gemini CLI (uses default model)"
+		},
+		"qwen": {
+			"enabled": false,
+			"command": "qwen -o text",
+			"description": "Qwen Code (Alibaba)"
+		},
+		"mistral": {
+			"enabled": false,
+			"command": "vibe --output text -p",
+			"description": "Mistral Vibe (Devstral) - uses command substitution instead of stdin"
 		}
 	},
 	"prompt_file": "~/.config/conclave/prompt.md"

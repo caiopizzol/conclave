@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash, Read, Write, Glob, Grep, TaskOutput, AskUserQuestion
-description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini) and synthesizes results interactively.
+description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini, Qwen, Mistral) and synthesizes results interactively.
 ---
 
 # Multi-Model Code Review
@@ -125,17 +125,25 @@ PROMPT_EOF
 
 **Step 4b - Run review commands in background** (run these in parallel with `run_in_background: true`):
 
+For most tools (stdin-based):
 ```bash
 cat /tmp/conclave-review-{tool_name}.md | {final_command} 2>&1
 ```
 
+For Mistral Vibe (command substitution - does not accept stdin):
+```bash
+{final_command} "$(cat /tmp/conclave-review-mistral.md)" 2>&1
+```
+
 **Model Flag Injection**: If a tool has a `model` field specified, inject the model flag into the command:
 
-| Tool   | Model Flag | Injection Point             |
-| ------ | ---------- | --------------------------- |
-| codex  | `-m`       | Before the `-` stdin marker |
-| claude | `--model`  | Appended to command         |
-| gemini | `-m`       | Appended to command         |
+| Tool     | Model Flag | Injection Point             |
+| -------- | ---------- | --------------------------- |
+| codex    | `-m`       | Before the `-` stdin marker |
+| claude   | `--model`  | Appended to command         |
+| gemini   | `-m`       | Appended to command         |
+| qwen     | `-m`       | Appended to command         |
+| mistral  | N/A        | Model set via `~/.vibe/config.toml` |
 
 **Notes**:
 - Codex model injection requires the command to end with ` -` (stdin marker). If the command doesn't end with ` -`, skip model injection for that tool.
@@ -154,8 +162,16 @@ Original: claude --print
 With model: claude --print --model claude-opus-4-5-20251101
 
 # Gemini (model flag appended)
-Original: gemini
-With model: gemini -m gemini-2.5-pro
+Original: gemini -o text
+With model: gemini -o text -m gemini-2.5-pro
+
+# Qwen (model flag appended)
+Original: qwen -o text
+With model: qwen -o text -m coder-model
+
+# Mistral (no model flag - configured via ~/.vibe/config.toml)
+# Uses command substitution instead of stdin:
+vibe --output text -p "$(cat /tmp/conclave-review-mistral.md)"
 ```
 
 Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
@@ -272,15 +288,21 @@ If the user wants, generate:
 
 ## Tool Command Reference
 
-All tools receive the prompt via stdin: `cat prompt.md | {command}`
+Most tools receive the prompt via stdin: `cat prompt.md | {command}`
 
-| Tool   | Default Command            | Model Flag               | Notes                                                      |
-| ------ | -------------------------- | ------------------------ | ---------------------------------------------------------- |
-| Codex  | `codex exec --full-auto -` | `-m` (insert before `-`) | `-` reads prompt from stdin, `--full-auto` skips approvals |
-| Claude | `claude --print`           | `--model` (append)       | `--print` outputs response without interactive mode        |
-| Gemini | `gemini`                   | `-m` (append)            | Reads prompt from stdin                                    |
+| Tool     | Default Command                    | Model Flag               | Notes                                                      |
+| -------- | ---------------------------------- | ------------------------ | ---------------------------------------------------------- |
+| Codex    | `codex exec --full-auto -`         | `-m` (insert before `-`) | `-` reads prompt from stdin, `--full-auto` skips approvals |
+| Claude   | `claude --print`                   | `--model` (append)       | `--print` outputs response without interactive mode        |
+| Gemini   | `gemini -o text`                   | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
+| Qwen     | `qwen -o text`                     | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
+| Mistral  | `vibe --output text -p`            | Config-based             | Uses command substitution: `vibe --output text -p "$(cat file)"` |
 
-**Note**: Each parallel subagent should use a unique temp file (e.g., `/tmp/conclave-review-{tool}.md`) to avoid race conditions.
+**Notes**:
+- Each parallel subagent should use a unique temp file (e.g., `/tmp/conclave-review-{tool}.md`) to avoid race conditions.
+- Mistral Vibe does not accept stdin; prompt must be passed via `-p` flag using command substitution.
+- Mistral model selection is done via `~/.vibe/config.toml` (`active_model` setting), not CLI flags.
+- **Limitation**: Mistral's command-line argument passing has a ~200KB limit (ARG_MAX). Very large diffs may fail.
 
 ---
 
