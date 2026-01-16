@@ -1,7 +1,7 @@
 ---
 name: review-investigator
 description: "Sub-agent for investigating code review findings. Called by /review after collecting parallel reviews. Investigates each issue, explains the problem, and drafts comments. Do not invoke directly - use /review instead."
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, WebSearch, WebFetch
 model: opus
 ---
 
@@ -19,8 +19,19 @@ For each issue flagged by reviewers, investigate the codebase and explain whethe
 2. For each issue:
    - Use Grep/Glob to find related code if needed
    - Read relevant files to understand context
+   - **Verify external claims** - if an issue claims a package version doesn't exist, an API is deprecated, or similar external facts, use WebSearch/WebFetch to confirm before marking as critical
    - Determine if it's a real problem or false positive
    - Draft a comment if worth mentioning
+
+## Verifying External Claims
+
+When reviewers claim something external doesn't exist or is wrong, verify it:
+- Package versions: Search for the package's releases page or changelog
+- GitHub Actions versions: Check github.com/{owner}/{action}/releases
+- API deprecations: Check official documentation
+- Library compatibility: Search for release notes or compatibility docs
+
+Don't trust model knowledge for version existence - always verify with web search.
 
 ## Priority Classification
 
