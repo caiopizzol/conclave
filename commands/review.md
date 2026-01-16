@@ -66,7 +66,7 @@ Get the actual diff content (excluding lock files and minified assets):
 
 ```bash
 # Use pathspec to exclude generated/large files from review
-git diff --staged -- \
+git diff --staged -- . \
   ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' ':!bun.lockb' ':!bun.lock' \
   ':!Cargo.lock' ':!Gemfile.lock' ':!composer.lock' ':!poetry.lock' ':!Pipfile.lock' \
   ':!go.sum' ':!pubspec.lock' ':!flake.lock' \
@@ -74,7 +74,7 @@ git diff --staged -- \
   ':!*.min.js' ':!*.min.css' ':!*.map'
 
 # Or for unstaged changes:
-git diff -- \
+git diff -- . \
   ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' ':!bun.lockb' ':!bun.lock' \
   ':!Cargo.lock' ':!Gemfile.lock' ':!composer.lock' ':!poetry.lock' ':!Pipfile.lock' \
   ':!go.sum' ':!pubspec.lock' ':!flake.lock' \
