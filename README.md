@@ -15,6 +15,7 @@ Multi-model code review for [Claude Code](https://claude.com/claude-code). Run r
    ├── Qwen Code ────► reviews independently
    ├── Mistral Vibe ─► reviews independently
    └── Ollama ───────► reviews independently (local)
+   └── Grok Build ───► coming soon
 
    ▼
    Synthesis: consensus highlighted, noise filtered
