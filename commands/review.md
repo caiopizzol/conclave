@@ -57,11 +57,30 @@ Check for command arguments. If files were specified, use those. Otherwise:
 2. If no staged changes, check for unstaged changes: `git diff --name-only`
 3. If no changes, ask the user what to review
 
-Get the actual diff content:
+Get the actual diff content (excluding lock files and minified assets):
 
 ```bash
-git diff --staged  # or git diff, depending on what's available
+# Use pathspec to exclude generated/large files from review
+git diff --staged -- \
+  ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' ':!bun.lockb' ':!bun.lock' \
+  ':!Cargo.lock' ':!Gemfile.lock' ':!composer.lock' ':!poetry.lock' ':!Pipfile.lock' \
+  ':!go.sum' ':!pubspec.lock' ':!flake.lock' \
+  ':!shrinkwrap.json' ':!.pnp.cjs' ':!.pnp.loader.mjs' \
+  ':!*.min.js' ':!*.min.css' ':!*.map'
+
+# Or for unstaged changes:
+git diff -- \
+  ':!package-lock.json' ':!yarn.lock' ':!pnpm-lock.yaml' ':!bun.lockb' ':!bun.lock' \
+  ':!Cargo.lock' ':!Gemfile.lock' ':!composer.lock' ':!poetry.lock' ':!Pipfile.lock' \
+  ':!go.sum' ':!pubspec.lock' ':!flake.lock' \
+  ':!shrinkwrap.json' ':!.pnp.cjs' ':!.pnp.loader.mjs' \
+  ':!*.min.js' ':!*.min.css' ':!*.map'
 ```
+
+**Excluded files** (auto-generated, not useful to review):
+- Lock files: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lockb`, `bun.lock`, `Cargo.lock`, `Gemfile.lock`, `composer.lock`, `poetry.lock`, `Pipfile.lock`, `go.sum`, `pubspec.lock`, `flake.lock`, `shrinkwrap.json`
+- Yarn PnP: `.pnp.cjs`, `.pnp.loader.mjs`
+- Minified assets: `*.min.js`, `*.min.css`, `*.map`
 
 ### Step 3b: Build the Review Prompt
 
