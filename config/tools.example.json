@@ -33,6 +33,12 @@
 			"command": "vibe --output text -p",
 			"description": "Mistral Vibe (Devstral)"
 		},
+		"grok": {
+			"enabled": false,
+			"command": "grok -p",
+			"model": "grok-code-fast-1",
+			"description": "xAI Grok CLI (community)"
+		},
 		"ollama-qwen": {
 			"enabled": false,
 			"command": "ollama run",

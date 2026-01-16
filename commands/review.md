@@ -1,6 +1,6 @@
 ---
 allowed-tools: Bash, Read, Write, Glob, Grep, TaskOutput, AskUserQuestion
-description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini, Qwen, Mistral, Ollama) and synthesizes results interactively.
+description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini, Qwen, Mistral, Ollama, Grok) and synthesizes results interactively.
 ---
 
 # Multi-Model Code Review
@@ -130,9 +130,9 @@ For most tools (stdin-based):
 cat /tmp/conclave-review-{tool_name}.md | {final_command} 2>&1
 ```
 
-For Mistral Vibe (command substitution - does not accept stdin):
+For Mistral Vibe and Grok (command substitution - do not accept stdin):
 ```bash
-{final_command} "$(cat /tmp/conclave-review-mistral.md)" 2>&1
+{final_command} "$(cat /tmp/conclave-review-{tool_name}.md)" 2>&1
 ```
 
 **Model Flag Injection**: If a tool has a `model` field specified, inject the model flag into the command:
@@ -145,6 +145,7 @@ For Mistral Vibe (command substitution - does not accept stdin):
 | qwen     | `-m`       | Appended to command         |
 | mistral  | N/A        | Model set via `~/.vibe/config.toml` |
 | ollama   | N/A        | Appended directly (no flag) |
+| grok     | `-m`       | Appended to command         |
 
 **Notes**:
 - Codex model injection requires the command to end with ` -` (stdin marker). If the command doesn't end with ` -`, skip model injection for that tool.
@@ -173,6 +174,12 @@ With model: qwen -o text -m coder-model
 # Mistral (no model flag - configured via ~/.vibe/config.toml)
 # Uses command substitution instead of stdin:
 vibe --output text -p "$(cat /tmp/conclave-review-mistral.md)"
+
+# Grok (model flag appended)
+# Uses command substitution instead of stdin:
+Original: grok -p
+With model: grok -p -m grok-code-fast-1
+grok -p -m grok-code-fast-1 "$(cat /tmp/conclave-review-grok.md)"
 
 # Ollama (model appended directly, no flag)
 Original: ollama run
@@ -302,13 +309,15 @@ Most tools receive the prompt via stdin: `cat prompt.md | {command}`
 | Gemini   | `gemini -o text`                   | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
 | Qwen     | `qwen -o text`                     | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
 | Mistral  | `vibe --output text -p`            | Config-based             | Uses command substitution: `vibe --output text -p "$(cat file)"` |
+| Grok     | `grok -p`                          | `-m` (append)            | Uses command substitution: `grok -p -m model "$(cat file)"` |
 | Ollama   | `ollama run`                       | Appended directly        | Model appended without flag: `ollama run <model>`          |
 
 **Notes**:
 - Each parallel subagent should use a unique temp file (e.g., `/tmp/conclave-review-{tool}.md`) to avoid race conditions.
 - Mistral Vibe does not accept stdin; prompt must be passed via `-p` flag using command substitution.
 - Mistral model selection is done via `~/.vibe/config.toml` (`active_model` setting), not CLI flags.
-- **Limitation**: Mistral's command-line argument passing has a ~200KB limit (ARG_MAX). Very large diffs may fail.
+- Grok CLI does not accept stdin; prompt must be passed via `-p` flag using command substitution (like Mistral).
+- **Limitation**: Mistral and Grok's command-line argument passing has a ~200KB limit (ARG_MAX). Very large diffs may fail.
 
 ---
 

@@ -7,6 +7,9 @@
 #
 # NOTE: Ollama cloud models (`:cloud` suffix) require OLLAMA_API_KEY environment variable.
 # Get your API key at https://ollama.com
+#
+# NOTE: Grok models require GROK_API_KEY environment variable.
+# Get your API key at https://console.x.ai
 
 set -eo pipefail
 
@@ -114,6 +117,23 @@ echo ""
 # Mistral (1 - config-based)
 echo "--- Mistral ---"
 test_model "mistral" "default" "vibe --output text -p" false
+echo ""
+
+# Grok models (7 - text models only, excluding vision/image)
+# Requires GROK_API_KEY environment variable
+echo "--- Grok ---"
+if [[ -n "$GROK_API_KEY" ]]; then
+    test_model "grok" "grok-code-fast-1" "grok -p -m grok-code-fast-1" false
+    test_model "grok" "grok-4-1-fast-reasoning" "grok -p -m grok-4-1-fast-reasoning" false
+    test_model "grok" "grok-4-1-fast-non-reasoning" "grok -p -m grok-4-1-fast-non-reasoning" false
+    test_model "grok" "grok-4-fast-reasoning" "grok -p -m grok-4-fast-reasoning" false
+    test_model "grok" "grok-4-fast-non-reasoning" "grok -p -m grok-4-fast-non-reasoning" false
+    test_model "grok" "grok-3" "grok -p -m grok-3" false
+    test_model "grok" "grok-3-mini" "grok -p -m grok-3-mini" false
+else
+    echo "  ○ grok models skipped (GROK_API_KEY not set)"
+    ((skipped+=7))
+fi
 echo ""
 
 # Ollama models
