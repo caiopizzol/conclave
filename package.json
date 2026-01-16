@@ -10,7 +10,8 @@
 		"format": "biome format --write .",
 		"lint": "biome lint .",
 		"prepare": "lefthook install",
-		"release": "semantic-release"
+		"release": "semantic-release",
+		"test:tools": "bash tests/verify-tools.sh"
 	},
 	"keywords": [
 		"code-review",

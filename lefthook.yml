@@ -8,3 +8,5 @@ pre-commit:
       glob: "*.{js,ts,jsx,tsx,json,md}"
       run: bunx @biomejs/biome check --write --staged --no-errors-on-unmatched {staged_files}
       stage_fixed: true
+    verify-tools:
+      run: bash tests/verify-tools.sh
