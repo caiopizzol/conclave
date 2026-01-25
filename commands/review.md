@@ -227,12 +227,44 @@ Then use AskUserQuestion:
 
 "Want me to investigate each issue and draft PR comments?"
 
-**If user opts in**, launch the `review-investigator` sub-agent using the Task tool:
+**If user opts in**:
+
+#### 5.5a: Create Investigation Worktree
+
+Before launching the investigator, create an isolated worktree to avoid disrupting local work:
+
+```bash
+# Get repo name and branch
+REPO_NAME=$(basename $(git rev-parse --show-toplevel))
+BRANCH_NAME=$(git branch --show-current)
+WORKTREE_PATH=~/worktrees/$REPO_NAME/review-$BRANCH_NAME
+
+# Create worktree directory
+mkdir -p ~/worktrees/$REPO_NAME
+
+# Create worktree from current branch (if changes are committed)
+# or from HEAD if reviewing uncommitted changes
+git worktree add $WORKTREE_PATH HEAD 2>/dev/null || git worktree add $WORKTREE_PATH
+```
+
+If the worktree already exists, reuse it:
+```bash
+cd $WORKTREE_PATH && git checkout $BRANCH_NAME
+```
+
+#### 5.5b: Launch Investigator
+
+Launch the `review-investigator` sub-agent using the Task tool:
 
 ```
 subagent_type: review-investigator
 prompt: |
-  Investigate these code review findings and draft comments:
+  Investigate these code review findings and draft comments.
+
+  **Working Directory**: [worktree path from 5.5a]
+  IMPORTANT: cd to this directory before investigating.
+
+  **Branch**: [branch name]
 
   **Diff Context**:
   [the diff being reviewed]
@@ -251,6 +283,13 @@ prompt: |
 ```
 
 Wait for the investigator to complete, then proceed to Step 6 with the investigation results.
+
+#### 5.5c: Cleanup (Optional)
+
+After investigation completes, inform the user about the worktree:
+
+> Investigation worktree created at `~/worktrees/<repo>/review-<branch>/`
+> Run `/worktree-cleanup` to remove it when done.
 
 **If user declines**, skip to Step 6 with just the raw review summaries.
 
