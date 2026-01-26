@@ -37,12 +37,17 @@ If the config doesn't exist, inform the user:
 > No config found at `~/.config/conclave/tools.json`.
 > Run: `mkdir -p ~/.config/conclave && cp ~/dev/conclave/config/tools.example.json ~/.config/conclave/tools.json`
 
-Parse the config to determine which tools are enabled. Each tool can have:
+Parse the config to determine which tools are enabled **for this command**. Each tool can have:
 
 - `enabled` (required) - whether to use this tool
+- `scope` (optional) - array of commands this tool is enabled for (e.g., `["review", "consult"]`)
 - `command` (required) - the CLI command to run
 - `model` (optional) - specific model to use (injected via `--model` or `-m` flag)
 - `description` (optional) - human-readable description
+
+**Scope Filtering**: A tool is eligible for `/review` if:
+- `enabled` is `true` AND
+- `scope` is not set (backwards compatible) OR `scope` array includes `"review"`
 
 ### Step 3: Gather Context
 
@@ -90,7 +95,9 @@ git diff -- . \
 
 ### Step 3b: Build the Review Prompt
 
-Read the prompt template from the file specified in `prompt_file` (default: `~/.config/conclave/prompt.md`):
+Read the prompt template from the config's `prompts.review` path (default: `~/.config/conclave/prompt.md`).
+
+**Note**: The config can use either the legacy `prompt_file` key or the new `prompts.review` key:
 
 ```bash
 cat ~/.config/conclave/prompt.md

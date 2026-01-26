@@ -2,79 +2,95 @@
 	"tools": {
 		"codex": {
 			"enabled": true,
+			"scope": ["review", "consult"],
 			"command": "codex exec --full-auto -",
 			"model": "gpt-5.2-codex",
 			"description": "OpenAI Codex CLI"
 		},
 		"claude-opus": {
 			"enabled": true,
+			"scope": ["review", "consult"],
 			"command": "claude --print",
 			"model": "opus",
 			"description": "Claude Code (Opus)"
 		},
 		"claude-sonnet": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "claude --print",
 			"model": "sonnet",
 			"description": "Claude Code (Sonnet)"
 		},
 		"gemini": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "gemini -o text",
 			"description": "Google Gemini CLI (uses default model)"
 		},
 		"qwen": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "qwen -o text",
 			"description": "Qwen Code (Alibaba)"
 		},
 		"mistral": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "vibe --output text -p",
 			"description": "Mistral Vibe (Devstral)"
 		},
 		"grok": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "grok -p",
 			"model": "grok-code-fast-1",
 			"description": "xAI Grok CLI (community)"
 		},
 		"ollama-qwen": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "ollama run",
 			"model": "qwen3-coder:480b-cloud",
 			"description": "Ollama (Qwen3 Coder 480B)"
 		},
 		"ollama-devstral": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "ollama run",
 			"model": "devstral-2:123b-cloud",
 			"description": "Ollama (Devstral 2 123B)"
 		},
 		"ollama-local": {
 			"enabled": false,
+			"scope": ["review"],
 			"command": "ollama run",
 			"model": "qwen2.5-coder:7b",
 			"description": "Ollama (Qwen 2.5 Coder 7B, local)"
 		},
 		"ollama-kimi": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "ollama run",
 			"model": "kimi-k2:1t-cloud",
 			"description": "Ollama (Kimi K2 1T)"
 		},
 		"ollama-glm": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "ollama run",
 			"model": "glm-4.7:cloud",
 			"description": "Ollama (GLM-4.7)"
 		},
 		"ollama-deepseek": {
 			"enabled": false,
+			"scope": ["review", "consult"],
 			"command": "ollama run",
 			"model": "deepseek-v3.2:cloud",
 			"description": "Ollama (DeepSeek V3.2)"
 		}
 	},
-	"prompt_file": "~/.config/conclave/prompt.md"
+	"prompts": {
+		"review": "~/.config/conclave/prompt.md",
+		"consult": "~/.config/conclave/consult-prompt.md"
+	}
 }

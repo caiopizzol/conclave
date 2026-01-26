@@ -2,28 +2,34 @@
 
 [![GitHub release](https://img.shields.io/github/v/release/caiopizzol/conclave)](https://github.com/caiopizzol/conclave/releases)
 
-Multi-model code review for [Claude Code](https://claude.com/claude-code). Run reviews across multiple AI CLI tools in parallel and get consensus-driven feedback.
+Multi-model AI collaboration for [Claude Code](https://claude.com/claude-code). Get consensus-driven code reviews and second opinions from multiple AI models in parallel.
+
+## Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/review` | Multi-model code review on your staged changes |
+| `/consult` | Get a second opinion when stuck on a problem |
 
 ## How It Works
 
 ```
-/review
-   │
-   ├── Claude Opus ──► reviews independently
-   ├── Codex ────────► reviews independently
-   ├── Gemini ───────► reviews independently
-   ├── Qwen Code ────► reviews independently
-   ├── Mistral Vibe ─► reviews independently
-   ├── Ollama ───────► reviews independently
-   └── Grok ─────────► reviews independently
-
-   ▼
-   Synthesis: consensus highlighted, noise filtered
+/review                              /consult "why is this broken?"
+   │                                    │
+   ├── Codex ───► reviews diff          ├── Codex ───► reads conversation
+   ├── Gemini ──► reviews diff          ├── Gemini ──► reads conversation
+   ├── Claude ──► reviews diff          ├── Claude ──► reads conversation
+   └── ...                              └── ...
+   │                                    │
+   ▼                                    ▼
+   Consensus: issues flagged            Synthesis: consensus suggestions,
+   by 2+ models highlighted             unique perspectives, disagreements
 ```
 
-When multiple models flag the same issue, that's a stronger signal than any single review.
-
-Enable/disable any combination of tools to get diverse perspectives from different training datasets.
+**Why multiple models?**
+- Different training data → different blind spots
+- 2+ models flagging the same issue → stronger signal
+- Diverse perspectives surface better solutions
 
 ## Inspiration
 
@@ -52,69 +58,44 @@ bun run unregister
   "tools": {
     "codex": {
       "enabled": true,
+      "scope": ["review", "consult"],
       "command": "codex exec --full-auto -",
       "model": "gpt-5.2-codex",
       "description": "OpenAI Codex CLI"
     },
     "claude-opus": {
       "enabled": true,
+      "scope": ["consult"],
       "command": "claude --print",
       "model": "opus",
       "description": "Claude Code (Opus)"
     },
-    "claude-sonnet": {
-      "enabled": false,
-      "command": "claude --print",
-      "model": "sonnet",
-      "description": "Claude Code (Sonnet)"
-    },
     "gemini": {
-      "enabled": false,
+      "enabled": true,
+      "scope": ["review", "consult"],
       "command": "gemini -o text",
-      "description": "Google Gemini CLI (uses default model)"
-    },
-    "qwen": {
-      "enabled": false,
-      "command": "qwen -o text",
-      "description": "Qwen Code (Alibaba)"
-    },
-    "mistral": {
-      "enabled": false,
-      "command": "vibe --output text -p",
-      "description": "Mistral Vibe (Devstral)"
-    },
-    "grok": {
-      "enabled": false,
-      "command": "grok -p",
-      "model": "grok-code-fast-1",
-      "description": "xAI Grok CLI (community)"
-    },
-    "ollama-qwen": {
-      "enabled": false,
-      "command": "ollama run",
-      "model": "qwen3-coder:480b-cloud",
-      "description": "Ollama (Qwen3 Coder 480B)"
-    },
-    "ollama-devstral": {
-      "enabled": false,
-      "command": "ollama run",
-      "model": "devstral-2:123b-cloud",
-      "description": "Ollama (Devstral 2 123B)"
-    },
-    "ollama-local": {
-      "enabled": false,
-      "command": "ollama run",
-      "model": "qwen2.5-coder:7b",
-      "description": "Ollama (Qwen 2.5 Coder 7B, local)"
+      "model": "gemini-3-pro-preview",
+      "description": "Google Gemini CLI"
     }
   },
-  "prompt_file": "~/.config/conclave/prompt.md"
+  "prompts": {
+    "review": "~/.config/conclave/prompt.md",
+    "consult": "~/.config/conclave/consult-prompt.md"
+  }
 }
 ```
 
-You can define multiple entries for the same provider with different models (e.g., `claude-opus` and `claude-sonnet`).
+#### Tool Fields
 
-The `model` field is optional for most tools. If omitted, each tool uses its default model. **Exception:** Ollama requires an explicit `model` since it has no default.
+| Field | Required | Description |
+|-------|----------|-------------|
+| `enabled` | Yes | Whether to use this tool |
+| `scope` | No | Array of commands: `["review"]`, `["consult"]`, or `["review", "consult"]`. If omitted, tool is used for all commands |
+| `command` | Yes | CLI command to run |
+| `model` | No | Model to use (injected via `--model` or `-m` flag) |
+| `description` | No | Human-readable description |
+
+You can define multiple entries for the same provider with different models (e.g., `claude-opus` and `claude-sonnet`).
 
 **Supported models:**
 
@@ -134,13 +115,14 @@ The `model` field is optional for most tools. If omitted, each tool uses its def
 
 > **Note:** Grok uses the community CLI ([`@vibe-kit/grok-cli`](https://github.com/superagent-ai/grok-cli)) until xAI releases the official "Grok Build" CLI.
 
-### Prompt (`~/.config/conclave/prompt.md`)
+### Prompts
 
-Customize review instructions with template variables:
+Customize prompts for each command:
 
-- `{{branch}}` — current branch
-- `{{target_branch}}` — target branch
-- `{{diff}}` — the diff content
+| File | Template Variables |
+|------|-------------------|
+| `~/.config/conclave/prompt.md` | `{{branch}}`, `{{target_branch}}`, `{{diff}}` |
+| `~/.config/conclave/consult-prompt.md` | `{{history_file}}`, `{{question}}`, `{{cwd}}` |
 
 ### Authentication
 
@@ -156,9 +138,28 @@ Customize review instructions with template variables:
 
 ## Usage
 
+### Code Review
+
 ```bash
+# Review staged changes
+git add -p
 /review
 ```
+
+### Second Opinion
+
+```bash
+# When stuck on a problem
+/consult "why is the table rendering broken after paste?"
+
+# When going in circles
+/consult "I've tried X, Y, Z but none work"
+
+# Validate an approach
+/consult "is this the right way to handle state here?"
+```
+
+`/consult` passes your Claude Code conversation history to external models, so they can see what's already been tried and avoid suggesting the same things.
 
 ## Philosophy
 
@@ -166,6 +167,7 @@ More models ≠ better. The value is **consensus**:
 
 - 1 model flags issue → might be noise
 - 2+ models flag same issue → likely real
+- Different perspectives → surface blind spots
 
 Conclave surfaces what matters.
 
