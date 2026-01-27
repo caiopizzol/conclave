@@ -115,24 +115,24 @@ For each tool that passes the scope filter, run background Bash commands.
 
 **Important**: Launch all commands in a SINGLE message with multiple Bash tool calls (using `run_in_background: true`) to run them in parallel.
 
-**Step 5a - Write prompt files** (run in parallel):
+**Step 5a - Write prompt file once**:
 
 ```bash
-cat > /tmp/conclave-consult-{tool_name}.md << 'PROMPT_EOF'
+cat > /tmp/conclave-consult-prompt.md << 'PROMPT_EOF'
 {consultation_prompt}
 PROMPT_EOF
 ```
 
-**Step 5b - Run consultation commands in background** (run in parallel with `run_in_background: true`):
+**Step 5b - Run consultation commands in background** (run ALL in parallel with `run_in_background: true`):
 
 For stdin-based tools:
 ```bash
-cat /tmp/conclave-consult-{tool_name}.md | {final_command} 2>&1
+cat /tmp/conclave-consult-prompt.md | {final_command} 2>&1
 ```
 
 For command substitution tools (Mistral, Grok):
 ```bash
-{final_command} "$(cat /tmp/conclave-consult-{tool_name}.md)" 2>&1
+{final_command} "$(cat /tmp/conclave-consult-prompt.md)" 2>&1
 ```
 
 Use `timeout: 300000` (5 minutes) for each command.

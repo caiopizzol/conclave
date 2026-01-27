@@ -1,4 +1,9 @@
 {
+	"persistence": {
+		"enabled": true,
+		"required": false,
+		"data_dir": "~/.local/share/conclave/reviews"
+	},
 	"tools": {
 		"codex": {
 			"enabled": true,
@@ -87,6 +92,27 @@
 			"command": "ollama run",
 			"model": "deepseek-v3.2:cloud",
 			"description": "Ollama (DeepSeek V3.2)"
+		},
+		"ollama-rnj": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama run",
+			"model": "rnj-1:8b-cloud",
+			"description": "Ollama (RNJ-1 8B, code/STEM optimized)"
+		},
+		"ollama-devstral-small": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama run",
+			"model": "devstral-small-2:24b-cloud",
+			"description": "Ollama (Devstral Small 2 24B, vision+tools)"
+		},
+		"ollama-minimax": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama run",
+			"model": "minimax-m2:cloud",
+			"description": "Ollama (MiniMax M2, coding/agentic)"
 		}
 	},
 	"prompts": {

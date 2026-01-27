@@ -7,9 +7,28 @@ description: Multi-model code review. Spawns parallel reviews from configured AI
 
 Review code using multiple AI CLI tools in parallel, then synthesize findings interactively.
 
+## State Machine
+
+This workflow follows a state machine pattern. Output the current state marker after each major step:
+
+```
+[STATE: INIT]           → Verifying git repo and loading config
+[STATE: GATHERING]      → Collecting diff and context
+[STATE: SPAWNING]       → Launching parallel review tools
+[STATE: TOOLS_COMPLETE] → All tools have returned
+[STATE: PERSISTED]      → Results saved to disk (or PERSISTENCE_SKIPPED/PERSISTENCE_FAILED_CONTINUING)
+[STATE: SYNTHESIZING]   → Building summary from results
+[STATE: INVESTIGATING]  → Deep investigation in progress
+[STATE: COMPLETE]       → Review finished
+```
+
+**Checkpoints**: Steps marked with ⛔ are blocking checkpoints that require verification before proceeding.
+
 ## Workflow
 
 ### Step 1: Verify Git Repository
+
+**State: `[INIT]`**
 
 First, check if we're in a git repository:
 
@@ -50,6 +69,8 @@ Parse the config to determine which tools are enabled **for this command**. Each
 - `scope` is not set (backwards compatible) OR `scope` array includes `"review"`
 
 ### Step 3: Gather Context
+
+**State: `[GATHERING]`**
 
 Collect git context for template variables:
 
@@ -113,33 +134,32 @@ If no prompt file exists, use a default review prompt.
 
 ### Step 4: Spawn Parallel Review Commands
 
+**State: `[SPAWNING]`**
+
 For each **enabled** tool in the config, run background Bash commands.
 
 **Important**: Launch all commands in a SINGLE message with multiple Bash tool calls (using `run_in_background: true`) to run them in parallel.
 
-For each tool:
+**Step 4a - Write prompt file once**:
 
-1. First, write the review prompt to a unique temp file (to avoid shell escaping issues and race conditions)
-2. Then run the CLI tool piping from that file, in background mode
-
-**Step 4a - Write prompt files** (run these in parallel):
+Write the review prompt to a single temp file (avoids shell escaping issues):
 
 ```bash
-cat > /tmp/conclave-review-{tool_name}.md << 'PROMPT_EOF'
+cat > /tmp/conclave-review-prompt.md << 'PROMPT_EOF'
 {review_prompt_with_variables_replaced}
 PROMPT_EOF
 ```
 
-**Step 4b - Run review commands in background** (run these in parallel with `run_in_background: true`):
+**Step 4b - Run review commands in background** (run ALL in parallel with `run_in_background: true`):
 
 For most tools (stdin-based):
 ```bash
-cat /tmp/conclave-review-{tool_name}.md | {final_command} 2>&1
+cat /tmp/conclave-review-prompt.md | {final_command} 2>&1
 ```
 
 For Mistral Vibe and Grok (command substitution - do not accept stdin):
 ```bash
-{final_command} "$(cat /tmp/conclave-review-{tool_name}.md)" 2>&1
+{final_command} "$(cat /tmp/conclave-review-prompt.md)" 2>&1
 ```
 
 **Model Flag Injection**: If a tool has a `model` field specified, inject the model flag into the command:
@@ -180,13 +200,13 @@ With model: qwen -o text -m coder-model
 
 # Mistral (no model flag - configured via ~/.vibe/config.toml)
 # Uses command substitution instead of stdin:
-vibe --output text -p "$(cat /tmp/conclave-review-mistral.md)"
+vibe --output text -p "$(cat /tmp/conclave-review-prompt.md)"
 
 # Grok (model flag appended)
 # Uses command substitution instead of stdin:
 Original: grok -p
 With model: grok -p -m grok-code-fast-1
-grok -p -m grok-code-fast-1 "$(cat /tmp/conclave-review-grok.md)"
+grok -p -m grok-code-fast-1 "$(cat /tmp/conclave-review-prompt.md)"
 
 # Ollama (model appended directly, no flag)
 Original: ollama run
@@ -200,9 +220,157 @@ Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
 - Call TaskOutput for each background task ID
 - This will block until each completes and return the full output
 
-### Step 5: Collect and Parse Results
+After ALL tools have returned, output: `[STATE: TOOLS_COMPLETE]`
 
-After all subagents complete, collect their outputs. Structure the findings:
+**IMPORTANT**: Proceed IMMEDIATELY to the persistence checkpoint. Do NOT synthesize or present results yet.
+
+### ⛔ CHECKPOINT: Persist Raw Outputs
+
+**CRITICAL: DO NOT PROCEED TO STEP 6 UNTIL PERSISTENCE IS COMPLETE OR EXPLICITLY SKIPPED**
+
+This checkpoint ensures review data is saved before any synthesis or user interaction.
+Skipping this step has caused data loss in past sessions.
+
+**State: `[TOOLS_COMPLETE]` → `[PERSISTED]`**
+
+---
+
+**Config options**:
+- `persistence.enabled`: Whether to save review results (default: true)
+- `persistence.required`: If true, STOP on persistence failure (default: false)
+- `persistence.data_dir`: Where to save results (default: `~/.local/share/conclave/reviews`)
+
+If `persistence.enabled` is `false` in the config:
+- Output: `[STATE: PERSISTENCE_SKIPPED]`
+- Proceed directly to Step 6
+
+If `persistence.enabled` is `true`:
+
+**5.1 - Create data directory and generate ID**:
+
+```bash
+mkdir -p ~/.local/share/conclave/reviews
+
+# Generate unique review ID
+REVIEW_ID=$(date -u +"%Y-%m-%dT%H-%M-%S")-$(basename $(git rev-parse --show-toplevel))-$(git branch --show-current | tr '/' '-')
+```
+
+**5.2 - Collect diff stats**:
+
+```bash
+# Get diff stats (e.g., "5 files changed, 120 insertions(+), 45 deletions(-)")
+git diff --stat | tail -1
+```
+
+**5.3 - Write JSON file**:
+
+Build a JSON file with the review data. For each tool that was run, include:
+- `tool_name`: The tool key from config
+- `model`: The model used (if specified)
+- `success`: Whether the tool completed without error
+- `output`: The raw output from the tool
+
+Use `jq` if available to construct the JSON, otherwise use a heredoc with proper escaping.
+
+The JSON structure should be:
+
+```json
+{
+  "id": "{REVIEW_ID}",
+  "timestamp": "{ISO timestamp}",
+  "context": {
+    "repo": "{repo name}",
+    "branch": "{branch name}",
+    "target_branch": "{target branch}",
+    "diff_stats": "{diff stat line}"
+  },
+  "models": {
+    "{tool_name}": {
+      "model": "{model}",
+      "success": true|false,
+      "output": "{raw output}"
+    }
+  },
+  "investigation": null
+}
+```
+
+Write this to `~/.local/share/conclave/reviews/{REVIEW_ID}.json`.
+
+**Important**: When writing the JSON, escape special characters in the model outputs (newlines, quotes, backslashes). If using a heredoc, use `jq -Rs` to properly escape the output strings, or write to temp files and use `jq` to construct the final JSON.
+
+Example approach using temp files and jq:
+
+```bash
+# Write each model output to a temp file
+echo "$CODEX_OUTPUT" > /tmp/conclave-output-codex.txt
+echo "$CLAUDE_OUTPUT" > /tmp/conclave-output-claude.txt
+
+# Build JSON using jq
+jq -n \
+  --arg id "$REVIEW_ID" \
+  --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg repo "$(basename $(git rev-parse --show-toplevel))" \
+  --arg branch "$(git branch --show-current)" \
+  --arg target "$TARGET_BRANCH" \
+  --arg diff_stats "$DIFF_STATS" \
+  --rawfile codex_output /tmp/conclave-output-codex.txt \
+  --rawfile claude_output /tmp/conclave-output-claude.txt \
+  '{
+    id: $id,
+    timestamp: $timestamp,
+    context: {
+      repo: $repo,
+      branch: $branch,
+      target_branch: $target,
+      diff_stats: $diff_stats
+    },
+    models: {
+      "codex": { model: "gpt-5.2-codex", success: true, output: $codex_output },
+      "claude-opus": { model: "opus", success: true, output: $claude_output }
+    },
+    investigation: null
+  }' > ~/.local/share/conclave/reviews/${REVIEW_ID}.json
+```
+
+Adapt the jq command based on which tools actually ran and their success/failure status.
+
+**If `jq` is not available**: Fall back to writing raw outputs to separate files:
+
+```bash
+mkdir -p ~/.local/share/conclave/reviews/${REVIEW_ID}
+echo "$CODEX_OUTPUT" > ~/.local/share/conclave/reviews/${REVIEW_ID}/codex.txt
+echo "$CLAUDE_OUTPUT" > ~/.local/share/conclave/reviews/${REVIEW_ID}/claude-opus.txt
+# Write metadata
+cat > ~/.local/share/conclave/reviews/${REVIEW_ID}/metadata.json << EOF
+{"timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)", "repo": "$(basename $(git rev-parse --show-toplevel))", "branch": "$(git branch --show-current)"}
+EOF
+```
+
+**If `jq` is not available**: Fall back to writing raw outputs to separate files (see fallback above).
+
+**5.4 - VERIFY PERSISTENCE** (Required):
+
+```bash
+# Verify the file was written successfully
+ls -la ~/.local/share/conclave/reviews/${REVIEW_ID}.json && echo "✓ PERSISTED: ${REVIEW_ID}"
+```
+
+If verification fails and `persistence.required` is `true` in config:
+- **STOP** and report the error to the user
+- Do NOT proceed to synthesis
+
+If verification succeeds OR `persistence.required` is `false`:
+- Output: `[STATE: PERSISTED]` (or `[STATE: PERSISTENCE_FAILED_CONTINUING]`)
+- Proceed to Step 6
+
+---
+
+### Step 6: Synthesize Results
+
+**State: `[PERSISTED]` → `[SYNTHESIZING]`**
+
+After persisting (or if persistence is disabled), structure the findings for presentation:
 
 ```
 ## Review Results
@@ -217,7 +385,9 @@ After all subagents complete, collect their outputs. Structure the findings:
 [gemini findings]
 ```
 
-### Step 5.5: Deep Investigation
+### Step 7: Deep Investigation
+
+**State: `[INVESTIGATING]` (if user opts in)**
 
 After collecting results, present a summary to the user and offer investigation.
 
@@ -236,7 +406,7 @@ Then use AskUserQuestion:
 
 **If user opts in**:
 
-#### 5.5a: Create Investigation Worktree
+#### 7a: Create Investigation Worktree
 
 Before launching the investigator, create an isolated worktree to avoid disrupting local work:
 
@@ -259,7 +429,7 @@ If the worktree already exists, reuse it:
 cd $WORKTREE_PATH && git checkout $BRANCH_NAME
 ```
 
-#### 5.5b: Launch Investigator
+#### 7b: Launch Investigator
 
 Launch the `review-investigator` sub-agent using the Task tool:
 
@@ -268,7 +438,7 @@ subagent_type: review-investigator
 prompt: |
   Investigate these code review findings and draft comments.
 
-  **Working Directory**: [worktree path from 5.5a]
+  **Working Directory**: [worktree path from 7a]
   IMPORTANT: cd to this directory before investigating.
 
   **Branch**: [branch name]
@@ -291,16 +461,34 @@ prompt: |
 
 Wait for the investigator to complete, then proceed to Step 6 with the investigation results.
 
-#### 5.5c: Cleanup (Optional)
+#### 7c: Cleanup (Optional)
 
 After investigation completes, inform the user about the worktree:
 
 > Investigation worktree created at `~/worktrees/<repo>/review-<branch>/`
 > Run `/worktree-cleanup` to remove it when done.
 
-**If user declines**, skip to Step 6 with just the raw review summaries.
+#### 7d: Update Persisted Results with Investigation
 
-### Step 6: Present Results for Approval
+If persistence is enabled and investigation was performed, update the JSON file with the investigation output:
+
+```bash
+# Update the investigation field in the persisted JSON
+INVESTIGATION_OUTPUT="[the investigation results from the sub-agent]"
+
+# Write investigation output to temp file
+echo "$INVESTIGATION_OUTPUT" > /tmp/conclave-investigation-output.txt
+
+# Update JSON using jq
+jq --rawfile investigation /tmp/conclave-investigation-output.txt \
+  '.investigation = { ran: true, output: $investigation }' \
+  ~/.local/share/conclave/reviews/${REVIEW_ID}.json > /tmp/conclave-review-updated.json \
+  && mv /tmp/conclave-review-updated.json ~/.local/share/conclave/reviews/${REVIEW_ID}.json
+```
+
+**If user declines**, skip to Step 8 with just the raw review summaries.
+
+### Step 8: Present Results for Approval
 
 If investigation was performed, present each issue with its drafted comment:
 
@@ -334,13 +522,15 @@ Use AskUserQuestion to engage:
 - "Gemini suggests refactoring the auth module. Is this in scope for this review?"
 - "Some style suggestions were made. Do you want to see those or focus on bugs only?"
 
-### Step 7: Generate Action Items (Optional)
+### Step 9: Generate Action Items (Optional)
 
 If the user wants, generate:
 
 - A summary of actionable findings
 - Suggested fixes for critical issues
 - A checklist of items to address
+
+After completing all steps, output: `[STATE: COMPLETE]`
 
 ---
 
@@ -359,7 +549,7 @@ Most tools receive the prompt via stdin: `cat prompt.md | {command}`
 | Ollama   | `ollama run`                       | Appended directly        | Model appended without flag: `ollama run <model>`          |
 
 **Notes**:
-- Each parallel subagent should use a unique temp file (e.g., `/tmp/conclave-review-{tool}.md`) to avoid race conditions.
+- All tools read from the same prompt file (`/tmp/conclave-review-prompt.md`) written once in Step 4a.
 - Mistral Vibe does not accept stdin; prompt must be passed via `-p` flag using command substitution.
 - Mistral model selection is done via `~/.vibe/config.toml` (`active_model` setting), not CLI flags.
 - Grok CLI does not accept stdin; prompt must be passed via `-p` flag using command substitution (like Mistral).

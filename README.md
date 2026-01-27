@@ -55,6 +55,11 @@ bun run unregister
 
 ```json
 {
+  "persistence": {
+    "enabled": true,
+    "required": false,
+    "data_dir": "~/.local/share/conclave/reviews"
+  },
   "tools": {
     "codex": {
       "enabled": true,
@@ -96,6 +101,19 @@ bun run unregister
 | `description` | No | Human-readable description |
 
 You can define multiple entries for the same provider with different models (e.g., `claude-opus` and `claude-sonnet`).
+
+#### Persistence Fields
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `enabled` | `true` | Save review results to disk for later analysis |
+| `required` | `false` | If `true`, halt on persistence failure instead of continuing |
+| `data_dir` | `~/.local/share/conclave/reviews` | Directory for saved review data |
+
+Review results are saved as JSON files containing raw model outputs, timestamps, and investigation results. This enables:
+- Tracking review history across PRs
+- Analyzing model performance over time
+- Recovering from context compaction
 
 **Supported models:**
 
@@ -170,6 +188,20 @@ More models ≠ better. The value is **consensus**:
 - Different perspectives → surface blind spots
 
 Conclave surfaces what matters.
+
+## Workflow
+
+`/review` follows a state machine pattern with checkpoints to ensure reliability:
+
+```
+[INIT] → [GATHERING] → [SPAWNING] → [TOOLS_COMPLETE]
+                                          │
+                                    ⛔ CHECKPOINT
+                                          │
+                                    [PERSISTED] → [SYNTHESIZING] → [INVESTIGATING] → [COMPLETE]
+```
+
+The ⛔ checkpoint ensures review data is persisted before synthesis. If `persistence.required` is `true`, the workflow halts on persistence failure.
 
 ## License
 
