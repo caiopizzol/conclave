@@ -130,3 +130,18 @@ Not a real issue - [reason]
 Draft comment:
 [skip]
 ```
+
+## Quality Summary (Required)
+
+At the END of your output, emit a single-line JSON block for quality tracking:
+
+```quality
+{"issues":[{"line":"file:123","flagged_by":["codex","claude"],"verdict":"real_issue"},{"line":"file:456","flagged_by":["codex"],"verdict":"false_positive"}]}
+```
+
+**verdict values**:
+- `real_issue` - Confirmed problem that should be fixed
+- `false_positive` - Not actually a problem
+- `wont_fix` - Valid concern but out of scope or intentional
+
+**flagged_by**: Use exact model keys from the review (e.g., "codex-5.2", "claude-opus", "ollama-qwen")

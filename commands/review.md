@@ -468,23 +468,29 @@ After investigation completes, inform the user about the worktree:
 > Investigation worktree created at `~/worktrees/<repo>/review-<branch>/`
 > Run `/worktree-cleanup` to remove it when done.
 
-#### 7d: Update Persisted Results with Investigation
+#### 7d: Persist Investigation + Quality Data
 
-If persistence is enabled and investigation was performed, update the JSON file with the investigation output:
+If persistence is enabled and investigation was performed, update the JSON with both investigation output and quality tracking data:
 
 ```bash
-# Update the investigation field in the persisted JSON
-INVESTIGATION_OUTPUT="[the investigation results from the sub-agent]"
-
 # Write investigation output to temp file
-echo "$INVESTIGATION_OUTPUT" > /tmp/conclave-investigation-output.txt
+echo "$INVESTIGATION_OUTPUT" > /tmp/conclave-investigation.txt
 
-# Update JSON using jq
-jq --rawfile investigation /tmp/conclave-investigation-output.txt \
-  '.investigation = { ran: true, output: $investigation }' \
-  ~/.local/share/conclave/reviews/${REVIEW_ID}.json > /tmp/conclave-review-updated.json \
-  && mv /tmp/conclave-review-updated.json ~/.local/share/conclave/reviews/${REVIEW_ID}.json
+# Extract quality JSON (line after ```quality marker)
+QUALITY_JSON=$(grep -A1 '```quality' /tmp/conclave-investigation.txt | tail -1)
+
+# Update persisted review with investigation and quality data
+jq --rawfile inv /tmp/conclave-investigation.txt \
+   --argjson q "${QUALITY_JSON:-null}" \
+   '.investigation = {ran: true, output: $inv} | .quality = $q' \
+   ~/.local/share/conclave/reviews/${REVIEW_ID}.json > /tmp/conclave-review-updated.json \
+   && mv /tmp/conclave-review-updated.json ~/.local/share/conclave/reviews/${REVIEW_ID}.json
 ```
+
+The `.quality` field contains structured issue verdicts for tracking model accuracy over time:
+- `real_issue` - Confirmed problem
+- `false_positive` - Not actually a problem
+- `wont_fix` - Valid but out of scope
 
 **If user declines**, skip to Step 8 with just the raw review summaries.
 
