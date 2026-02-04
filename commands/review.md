@@ -454,9 +454,15 @@ prompt: |
   For each issue:
   1. Read the relevant code to understand context
   2. Explain why this is (or isn't) a real problem
-  3. Draft a comment
+  3. Assign a verdict: `real_issue`, `false_positive`, or `needs_clarification`
+  4. If real_issue or needs_clarification: Draft an inline comment
 
-  Output plain text, no markdown, no emojis, no AI-speak.
+  After investigating all issues, provide:
+  - **Summary**: Brief overview of findings (what's real, what's not)
+  - **Recommended action**: "Request changes" / "Comment" / "Approve"
+  - **Reason**: Why this action (e.g., "critical bug found" or "only minor suggestions")
+
+  Output plain text, no markdown formatting beyond code blocks, no emojis, no AI-speak.
 ```
 
 Wait for the investigator to complete, then proceed to Step 6 with the investigation results.
@@ -496,25 +502,38 @@ The `.quality` field contains structured issue verdicts for tracking model accur
 
 ### Step 8: Present Results for Approval
 
-If investigation was performed, present each issue with its drafted comment:
+If investigation was performed, present the investigation summary first, then each issue:
 
 ```
-=== Issues Found (N total) ===
+=== Investigation Summary ===
+Real issues: [count]
+False positives: [count]
+Needs clarification: [count]
+
+Recommended action: [Request changes / Comment / Approve]
+Reason: [brief reason from investigator]
+
+=== Issues Found ===
 
 [CRITICAL] Line X - Issue title
+Verdict: real_issue
 Draft: "the drafted comment"
-→ Post this comment? [y/n/edit]
 
 [MEDIUM] Line Y - Issue title
-Draft: "the drafted comment"
-→ Post this comment? [y/n/edit]
+Verdict: false_positive
+Reason: [why this isn't actually a problem]
 
 [LOW] Line Z - Issue title
+Verdict: needs_clarification
 Draft: "the drafted comment"
-→ Post this comment? [y/n/edit]
 ```
 
-Use AskUserQuestion to let the user approve, skip, or edit each comment.
+After presenting the summary, use AskUserQuestion to confirm the review action:
+
+"Investigation complete. Ready to draft the final review comment?"
+- "Yes, draft it" - Proceed to Step 9
+- "Let me review the inline comments first" - Present each draft for approval/editing
+- "Skip final comment" - End without summary comment
 
 If no investigation was performed, fall back to the standard synthesis:
 
@@ -528,7 +547,73 @@ Use AskUserQuestion to engage:
 - "Gemini suggests refactoring the auth module. Is this in scope for this review?"
 - "Some style suggestions were made. Do you want to see those or focus on bugs only?"
 
-### Step 9: Generate Action Items (Optional)
+### Step 9: Draft Final Review Comment
+
+After investigation is complete and inline comments are drafted, generate a **final summary comment** for the GitHub PR review submission dialog.
+
+The final comment should:
+1. **Summarize the review** - Brief overview of what was reviewed and overall quality
+2. **List key findings** - Bullet points of the main issues (with severity)
+3. **Note false positives** - Mention any reviewer concerns that were dismissed and why
+4. **Recommend review action** - Suggest "Approve", "Comment", or "Request changes"
+
+**Output format**:
+
+```
+## Final Review Comment
+
+**Recommended action:** [Request changes / Comment / Approve]
+
+**Draft comment:**
+---
+[The actual comment text the user can copy/paste into GitHub]
+---
+
+Copy the text between the --- lines into the GitHub review dialog.
+```
+
+**Guidelines for the draft comment**:
+- Write like a colleague, not a formal report - conversational but concise
+- Use lowercase for casual observations, questions where appropriate
+- Ask questions instead of demanding changes when the issue isn't blocking
+- Skip bullet points for single issues - just say it naturally
+- Reference inline comments casually ("left a question inline about X")
+- Match the tone of how you'd talk in a quick Slack message or standup
+
+**Tone examples**:
+- Instead of: "**Bug in autospacing calculation** - when `lineRaw` is a small multiplier..."
+- Write: "the autospacing calc looks off when `lineRaw` is small - might produce near-zero spacing?"
+
+- Instead of: "Please confirm this is intentional."
+- Write: "is this intentional?"
+
+- Instead of: "Two items need attention:"
+- Write: "couple things:"
+
+**Example draft comments**:
+
+For "Request changes":
+```
+nice cleanup on the line spacing normalization. couple things:
+
+the autospacing calc looks off when `lineRaw` is ≤10 - it bypasses twips conversion which would give near-zero spacing for those docs.
+
+also converting `exact` to a multiplier makes it font-dependent - was that intentional?
+
+see inline comments for details.
+```
+
+For "Comment":
+```
+good fix for the percentage width handling. left a question inline about test coverage for the mixed pct/dxa scenario. lgtm otherwise.
+```
+
+For "Approve":
+```
+looks good. the spec-compliant autospacing handling is correct. minor suggestions inline.
+```
+
+### Step 10: Generate Action Items (Optional)
 
 If the user wants, generate:
 

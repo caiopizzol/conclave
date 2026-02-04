@@ -136,12 +136,23 @@ Draft comment:
 At the END of your output, emit a single-line JSON block for quality tracking:
 
 ```quality
-{"issues":[{"line":"file:123","flagged_by":["codex","claude"],"verdict":"real_issue"},{"line":"file:456","flagged_by":["codex"],"verdict":"false_positive"}]}
+{"issues":[{"line":"file:123","flagged_by":["codex","claude"],"verdict":"real_issue","category":"bug","severity":"critical","description":"null ref when userId missing"}]}
 ```
 
-**verdict values**:
-- `real_issue` - Confirmed problem that should be fixed
-- `false_positive` - Not actually a problem
-- `wont_fix` - Valid concern but out of scope or intentional
+**Required fields**:
 
-**flagged_by**: Use exact model keys from the review (e.g., "codex-5.2", "claude-opus", "ollama-qwen")
+- `line` - File and line number (e.g., "src/auth.ts:42")
+- `flagged_by` - Model keys from the review (e.g., "codex-5.2", "claude-opus", "ollama-qwen")
+- `verdict` - One of:
+  - `real_issue` - Confirmed problem that should be fixed
+  - `false_positive` - Not actually a problem
+  - `wont_fix` - Valid concern but out of scope or intentional
+- `category` - One of:
+  - `bug` - Runtime errors, logic flaws, crashes
+  - `security` - Auth bypasses, injection, data exposure
+  - `performance` - N+1 queries, memory leaks, unnecessary work
+  - `style` - Naming, formatting, code organization
+  - `test-coverage` - Missing tests, untested branches
+  - `other` - Doesn't fit above categories
+- `severity` - One of: `critical`, `medium`, `low`
+- `description` - Brief (5-10 word) description of the issue
