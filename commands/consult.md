@@ -141,26 +141,44 @@ Use `timeout: 300000` (5 minutes) for each command.
 
 **Step 5c - Wait for all background tasks** using TaskOutput tool.
 
-### Step 6: Synthesize Responses
+### Step 6: Your Own Analysis + Synthesize Responses
 
-After all tools respond, analyze the results:
+After all tools respond, **form your own opinion first**, then synthesize.
 
-1. **Find consensus** - Where do multiple models agree?
-2. **Identify unique insights** - What did only one model suggest?
-3. **Note disagreements** - Where do models differ?
+#### 6a: Your Own Analysis
+
+You have the full conversation history, the problem description, and the codebase. **Think through the problem yourself** — don't just summarize what the external tools said. Consider:
+
+- What's the root cause based on the evidence in the conversation?
+- What approaches would you suggest?
+- Do you see something the external tools missed?
+- Do you disagree with any of their suggestions?
+
+You are a consultant too, not just a moderator.
+
+#### 6b: Synthesize All Perspectives
+
+Now combine **your own analysis** with the external model results. You count as a participant — if you and one external tool agree, that's consensus.
+
+1. **Find consensus** - Where do multiple models (including yourself) agree?
+2. **Identify unique insights** - What did only one model (or only you) suggest?
+3. **Note disagreements** - Where do models differ? Include your own disagreements with external tools.
 
 Present a synthesis:
 
 ```
 === Consultation Results ===
 
-Models consulted: [list]
+Models consulted: [list] + Claude (self)
 
-## Consensus (N+ models agree)
+## Consensus (2+ agree)
 - [Point that multiple models raised]
 - [Another shared insight]
 
 ## Unique Perspectives
+
+### From Claude (self)
+[Your own unique insight or approach]
 
 ### From Codex
 [Unique insight or approach]
@@ -169,11 +187,11 @@ Models consulted: [list]
 [Different angle or suggestion]
 
 ## Disagreements
-- Codex suggests X, while Claude suggests Y
+- Codex suggests X, while you think Y because [reason]
 - [Explain the tradeoff]
 
 ## Recommended Path Forward
-Based on the consultation:
+Based on all perspectives including your own:
 1. [Most promising suggestion]
 2. [Alternative if #1 doesn't work]
 ```
@@ -228,7 +246,6 @@ Same as `/review` - see `~/.config/conclave/tools.json` for enabled tools.
 | Tool     | Default Command                    | Model Flag               |
 | -------- | ---------------------------------- | ------------------------ |
 | Codex    | `codex exec --full-auto -`         | `-m` (before `-`)        |
-| Claude   | `claude --print`                   | `--model` (append)       |
 | Gemini   | `gemini -o text`                   | `-m` (append)            |
 | Qwen     | `qwen -o text`                     | `-m` (append)            |
 | Mistral  | `vibe --output text -p`            | Config-based             |
