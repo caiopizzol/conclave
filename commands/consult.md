@@ -1,7 +1,7 @@
 ---
 description: "Get a second opinion from multiple AI models when stuck on a problem. Use when going in circles, facing a tricky decision, or wanting alternative approaches."
 argument-hint: "[problem description]"
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, TaskOutput, AskUserQuestion, mcp__browser-tools__*
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, TaskOutput, AskUserQuestion, mcp__browser-tools__*
 ---
 
 # Multi-Model Consultation
@@ -111,45 +111,29 @@ If no prompt file exists, use the default embedded prompt.
 
 ### Step 5: Spawn Parallel Consultations
 
-For each tool that passes the scope filter, run background Bash commands.
+Delegate parallel execution to the `multi-model-executor` sub-agent using the Task tool. This keeps raw model outputs out of the orchestrator's context window.
 
-**Important**: Launch all commands in a SINGLE message with multiple Bash tool calls (using `run_in_background: true`) to run them in parallel.
+```
+Task tool call:
+  subagent_type: multi-model-executor
+  prompt: |
+    Execute this consultation prompt across all eligible tools.
 
-**Step 5a - Write prompt file once**:
+    **Scope**: consult
+    **Timeout**: 300000
 
-```bash
-cat > /tmp/conclave-consult-prompt.md << 'PROMPT_EOF'
-{consultation_prompt}
-PROMPT_EOF
+    **Prompt**:
+    <prompt>
+    {the complete consultation prompt from Step 4, with all template variables replaced}
+    </prompt>
+
+    **Tools**:
+    {the full "tools" JSON object from the user's config}
 ```
 
-**Step 5b - Run consultation commands in background** (run ALL in parallel with `run_in_background: true`):
+The executor handles everything: writing the prompt file, filtering by scope, spawning tools in parallel, model flag injection, CLAUDECODE=0 prefixing, and collecting results. It returns a structured JSON block.
 
-**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command contains `claude`:
-
-```bash
-# Claude tools
-cat /tmp/conclave-consult-prompt.md | CLAUDECODE=0 claude --print --model opus 2>&1
-
-# Ollama cloud tools (runs Claude Code pointed at Ollama's API)
-cat /tmp/conclave-consult-prompt.md | CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud 2>&1
-```
-
-For stdin-based tools:
-```bash
-cat /tmp/conclave-consult-prompt.md | {final_command} 2>&1
-```
-
-For command substitution tools (Mistral, Grok):
-```bash
-{final_command} "$(cat /tmp/conclave-consult-prompt.md)" 2>&1
-```
-
-Use `timeout: 300000` (5 minutes) for each command.
-
-**Model Flag Injection**: Same as `/review` - see Tool Command Reference below.
-
-**Step 5c - Wait for all background tasks** using TaskOutput tool.
+After the executor returns, parse the JSON `results` object to extract each tool's output.
 
 ### Step 6: Synthesize Responses
 
@@ -230,21 +214,6 @@ Use AskUserQuestion to engage:
 - "Suggestion validated. Want me to implement the fix?"
 - "Suggestion didn't hold up. Want to try the alternative approach?"
 - "There's disagreement on Y vs Z. Which direction do you prefer?"
-
-## Tool Command Reference
-
-Same as `/review` - see `~/.config/conclave/tools.json` for enabled tools.
-
-| Tool     | Default Command                    | Model Flag               |
-| -------- | ---------------------------------- | ------------------------ |
-| Codex    | `codex exec --full-auto -`         | `-m` (before `-`)        |
-| Claude   | `claude --print`                   | `--model` (append)       |
-| Gemini   | `gemini -o text`                   | `-m` (append)            |
-| Qwen     | `qwen -o text`                     | `-m` (append)            |
-| Mistral  | `vibe --output text -p`            | Config-based             |
-| Grok     | `grok -p`                          | `-m` (append)            |
-| Ollama (local) | `ollama run`                  | Appended directly        |
-| Ollama (cloud) | `ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print` | `--model` (append) |
 
 ## Error Handling
 

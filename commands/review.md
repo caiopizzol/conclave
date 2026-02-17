@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash, Read, Write, Glob, Grep, TaskOutput, AskUserQuestion
+allowed-tools: Bash, Read, Write, Glob, Grep, Task, TaskOutput, AskUserQuestion
 description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini, Qwen, Mistral, Ollama, Grok) and synthesizes results interactively.
 ---
 
@@ -132,111 +132,33 @@ Replace template variables in the prompt:
 
 If no prompt file exists, use a default review prompt.
 
-### Step 4: Spawn Parallel Review Commands
+### Step 4: Spawn Parallel Reviews
 
 **State: `[SPAWNING]`**
 
-For each **enabled** tool in the config, run background Bash commands.
-
-**Important**: Launch all commands in a SINGLE message with multiple Bash tool calls (using `run_in_background: true`) to run them in parallel.
-
-**Step 4a - Write prompt file once**:
-
-Write the review prompt to a single temp file (avoids shell escaping issues):
-
-```bash
-cat > /tmp/conclave-review-prompt.md << 'PROMPT_EOF'
-{review_prompt_with_variables_replaced}
-PROMPT_EOF
-```
-
-**Step 4b - Run review commands in background** (run ALL in parallel with `run_in_background: true`):
-
-**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command contains `claude`:
-
-```bash
-# Claude tools
-cat /tmp/conclave-review-prompt.md | CLAUDECODE=0 claude --print --model opus 2>&1
-
-# Ollama cloud tools (runs Claude Code pointed at Ollama's API)
-cat /tmp/conclave-review-prompt.md | CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud 2>&1
-```
-
-For most tools (stdin-based):
-```bash
-cat /tmp/conclave-review-prompt.md | {final_command} 2>&1
-```
-
-For Mistral Vibe and Grok (command substitution - do not accept stdin):
-```bash
-{final_command} "$(cat /tmp/conclave-review-prompt.md)" 2>&1
-```
-
-**Model Flag Injection**: If a tool has a `model` field specified, inject the model flag into the command:
-
-| Tool     | Model Flag | Injection Point             |
-| -------- | ---------- | --------------------------- |
-| codex    | `-m`       | Before the `-` stdin marker |
-| claude   | `--model`  | Appended to command         |
-| gemini   | `-m`       | Appended to command         |
-| qwen     | `-m`       | Appended to command         |
-| mistral  | N/A        | Model set via `~/.vibe/config.toml` |
-| ollama (cloud) | `--model` | Appended (same as claude) |
-| ollama (local) | N/A       | Appended directly         |
-| grok     | `-m`       | Appended to command         |
-
-**Notes**:
-- Codex model injection requires the command to end with ` -` (stdin marker). If the command doesn't end with ` -`, skip model injection for that tool.
-- Model values should be simple identifiers (alphanumeric, dots, dashes). Do not include shell metacharacters.
-- If the user's command already includes a model flag (`-m` or `--model`), skip model injection to avoid duplicate flags.
-
-Command construction examples:
+Delegate parallel execution to the `multi-model-executor` sub-agent using the Task tool. This keeps raw model outputs out of the orchestrator's context window.
 
 ```
-# Codex (model flag goes BEFORE the trailing `-`)
-Original: codex exec --full-auto -
-With model: codex exec --full-auto -m gpt-5.2-codex -
+Task tool call:
+  subagent_type: multi-model-executor
+  prompt: |
+    Execute this review prompt across all eligible tools.
 
-# Claude (model flag appended)
-Original: claude --print
-With model: claude --print --model claude-opus-4-5-20251101
+    **Scope**: review
+    **Timeout**: 300000
 
-# Gemini (model flag appended)
-Original: gemini -o text
-With model: gemini -o text -m gemini-2.5-pro
+    **Prompt**:
+    <prompt>
+    {the complete review prompt from Step 3b, with all template variables replaced}
+    </prompt>
 
-# Qwen (model flag appended)
-Original: qwen -o text
-With model: qwen -o text -m coder-model
-
-# Mistral (no model flag - configured via ~/.vibe/config.toml)
-# Uses command substitution instead of stdin:
-vibe --output text -p "$(cat /tmp/conclave-review-prompt.md)"
-
-# Grok (model flag appended)
-# Uses command substitution instead of stdin:
-Original: grok -p
-With model: grok -p -m grok-code-fast-1
-grok -p -m grok-code-fast-1 "$(cat /tmp/conclave-review-prompt.md)"
-
-# Ollama local (model appended directly, no flag)
-Original: ollama run
-With model: ollama run qwen2.5-coder:7b
-
-# Ollama cloud (--model appended, env vars point Claude at Ollama API)
-Original: ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print
-With model: ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud
-Final: cat /tmp/prompt.md | CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud 2>&1
+    **Tools**:
+    {the full "tools" JSON object from the user's config}
 ```
 
-Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
+The executor handles everything: writing the prompt file, filtering by scope, spawning tools in parallel, model flag injection, CLAUDECODE=0 prefixing, and collecting results. It returns a structured JSON block.
 
-**Step 4c - Wait for all background tasks** using TaskOutput tool:
-
-- Call TaskOutput for each background task ID
-- This will block until each completes and return the full output
-
-After ALL tools have returned, output: `[STATE: TOOLS_COMPLETE]`
+After the executor returns, parse the JSON `results` object to extract each tool's output. Output: `[STATE: TOOLS_COMPLETE]`
 
 **IMPORTANT**: Proceed IMMEDIATELY to the persistence checkpoint. Do NOT synthesize or present results yet.
 
@@ -638,31 +560,6 @@ If the user wants, generate:
 - A checklist of items to address
 
 After completing all steps, output: `[STATE: COMPLETE]`
-
----
-
-## Tool Command Reference
-
-Most tools receive the prompt via stdin: `cat prompt.md | {command}`
-
-| Tool     | Default Command                    | Model Flag               | Notes                                                      |
-| -------- | ---------------------------------- | ------------------------ | ---------------------------------------------------------- |
-| Codex    | `codex exec --full-auto -`         | `-m` (insert before `-`) | `-` reads prompt from stdin, `--full-auto` skips approvals |
-| Claude   | `claude --print`                   | `--model` (append)       | `--print` outputs response without interactive mode        |
-| Gemini   | `gemini -o text`                   | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
-| Qwen     | `qwen -o text`                     | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
-| Mistral  | `vibe --output text -p`            | Config-based             | Uses command substitution: `vibe --output text -p "$(cat file)"` |
-| Grok     | `grok -p`                          | `-m` (append)            | Uses command substitution: `grok -p -m model "$(cat file)"` |
-| Ollama (local) | `ollama run`                  | Appended directly        | Model appended without flag: `ollama run <model>`          |
-| Ollama (cloud) | `ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print` | `--model` (append) | Runs Claude Code against Ollama's API. Requires `CLAUDECODE=0` and `OLLAMA_API_KEY` |
-
-**Notes**:
-- All tools read from the same prompt file (`/tmp/conclave-review-prompt.md`) written once in Step 4a.
-- Mistral Vibe does not accept stdin; prompt must be passed via `-p` flag using command substitution.
-- Mistral model selection is done via `~/.vibe/config.toml` (`active_model` setting), not CLI flags.
-- Grok CLI does not accept stdin; prompt must be passed via `-p` flag using command substitution (like Mistral).
-- Ollama cloud models (`:cloud` suffix) run Claude Code pointed at Ollama's Anthropic-compatible API via env vars. The model gets access to file read, grep, bash, and other Claude Code tools.
-- **Limitation**: Mistral and Grok's command-line argument passing has a ~200KB limit (ARG_MAX). Very large diffs may fail.
 
 ---
 
