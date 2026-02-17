@@ -1,6 +1,6 @@
 {
 	"name": "conclave",
-	"version": "0.10.0",
+	"version": "0.10.1",
 	"description": "Multi-model AI collaboration for Claude Code - code reviews and second opinions",
 	"scripts": {
 		"register": "mkdir -p ~/.claude/commands ~/.claude/agents ~/.config/conclave && ln -sf $(pwd)/commands/review.md ~/.claude/commands/review.md && ln -sf $(pwd)/commands/consult.md ~/.claude/commands/consult.md && ln -sf $(pwd)/agents/review-investigator.md ~/.claude/agents/review-investigator.md && ln -sf $(pwd)/agents/multi-model-executor.md ~/.claude/agents/multi-model-executor.md && cp -n config/tools.example.json ~/.config/conclave/tools.json 2>/dev/null || true && cp -n config/prompt.example.md ~/.config/conclave/prompt.md 2>/dev/null || true && cp -n config/consult-prompt.example.md ~/.config/conclave/consult-prompt.md 2>/dev/null || true && echo '⊛ conclave registered'",
