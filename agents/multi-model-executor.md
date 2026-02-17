@@ -43,14 +43,14 @@ For each tool in the config:
 
 **Environment override for nested Claude Code**:
 
-When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command starts with `claude` or uses `ollama launch claude`:
+When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command contains `claude`:
 
 ```bash
 # Claude tools
 cat /tmp/conclave-prompt.md | CLAUDECODE=0 claude --print 2>&1
 
-# Ollama cloud tools (ollama launch claude wraps Claude Code)
-cat /tmp/conclave-prompt.md | CLAUDECODE=0 ollama launch claude --model minimax-m2.5:cloud -- --print 2>&1
+# Ollama cloud tools (runs Claude Code pointed at Ollama's API)
+cat /tmp/conclave-prompt.md | CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud 2>&1
 ```
 
 **Stdin-based tools** (most):
@@ -83,18 +83,17 @@ Skip injection if command already contains a model flag.
 
 Ollama has two command patterns depending on model type:
 
-**Cloud models** (`:cloud` suffix) — use `ollama launch claude` (agentic, with tools/web search):
-- Command: `ollama launch claude -- --print`
-- Model injection: `--model` flag inserted before `--`
-- Requires `CLAUDECODE=0` prefix
-- Example: `cat /tmp/conclave-prompt.md | CLAUDECODE=0 ollama launch claude --model qwen3-coder:480b-cloud -- --print 2>&1`
+**Cloud models** (`:cloud` suffix) — run Claude Code pointed at Ollama's Anthropic-compatible API:
+- Command: `ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print`
+- Model injection: `--model` flag appended (same as regular Claude)
+- Requires `CLAUDECODE=0` prefix (since it runs `claude`)
+- Requires `OLLAMA_API_KEY` env var
+- Example: `cat /tmp/conclave-prompt.md | CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud 2>&1`
 
 **Local models** (no `:cloud` suffix) — use `ollama run` (text-only):
 - Command: `ollama run`
 - Model injection: Appended directly (no flag)
 - Example: `cat /tmp/conclave-prompt.md | ollama run qwen2.5-coder:7b 2>&1`
-
-Detection: If the tool's `model` field ends with `:cloud`, use the cloud pattern.
 
 ### Step 3: Collect Results
 

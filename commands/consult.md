@@ -125,14 +125,14 @@ PROMPT_EOF
 
 **Step 5b - Run consultation commands in background** (run ALL in parallel with `run_in_background: true`):
 
-**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command starts with `claude` or uses `ollama launch claude`:
+**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command contains `claude`:
 
 ```bash
 # Claude tools
 cat /tmp/conclave-consult-prompt.md | CLAUDECODE=0 claude --print --model opus 2>&1
 
-# Ollama cloud tools
-cat /tmp/conclave-consult-prompt.md | CLAUDECODE=0 ollama launch claude --model minimax-m2.5:cloud -- --print 2>&1
+# Ollama cloud tools (runs Claude Code pointed at Ollama's API)
+cat /tmp/conclave-consult-prompt.md | CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud 2>&1
 ```
 
 For stdin-based tools:
@@ -244,7 +244,7 @@ Same as `/review` - see `~/.config/conclave/tools.json` for enabled tools.
 | Mistral  | `vibe --output text -p`            | Config-based             |
 | Grok     | `grok -p`                          | `-m` (append)            |
 | Ollama (local) | `ollama run`                  | Appended directly        |
-| Ollama (cloud) | `ollama launch claude -- --print` | `--model` (before `--`) |
+| Ollama (cloud) | `ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print` | `--model` (append) |
 
 ## Error Handling
 

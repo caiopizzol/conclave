@@ -54,58 +54,58 @@
 		"ollama-minimax": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama launch claude -- --print",
+			"command": "ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print",
 			"model": "minimax-m2.5:cloud",
-			"description": "Ollama (MiniMax M2.5, agentic)"
+			"description": "Ollama (MiniMax M2.5, cloud)"
 		},
 		"ollama-glm": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama launch claude -- --print",
+			"command": "ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print",
 			"model": "glm-5:cloud",
-			"description": "Ollama (GLM-5, agentic)"
+			"description": "Ollama (GLM-5, cloud)"
 		},
 		"ollama-kimi": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama launch claude -- --print",
+			"command": "ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print",
 			"model": "kimi-k2.5:cloud",
-			"description": "Ollama (Kimi K2.5, agentic)"
+			"description": "Ollama (Kimi K2.5, cloud)"
 		},
 		"ollama-qwen": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama launch claude -- --print",
+			"command": "ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print",
 			"model": "qwen3-coder:480b-cloud",
-			"description": "Ollama (Qwen3 Coder 480B, agentic)"
+			"description": "Ollama (Qwen3 Coder 480B, cloud)"
 		},
 		"ollama-devstral": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama launch claude -- --print",
+			"command": "ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print",
 			"model": "devstral-2:123b-cloud",
-			"description": "Ollama (Devstral 2 123B, agentic)"
+			"description": "Ollama (Devstral 2 123B, cloud)"
 		},
 		"ollama-deepseek": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama launch claude -- --print",
+			"command": "ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print",
 			"model": "deepseek-v3.2:cloud",
-			"description": "Ollama (DeepSeek V3.2, agentic)"
+			"description": "Ollama (DeepSeek V3.2, cloud)"
 		},
 		"ollama-rnj": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama launch claude -- --print",
+			"command": "ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print",
 			"model": "rnj-1:8b-cloud",
-			"description": "Ollama (RNJ-1 8B, agentic)"
+			"description": "Ollama (RNJ-1 8B, cloud)"
 		},
 		"ollama-devstral-small": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama launch claude -- --print",
+			"command": "ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print",
 			"model": "devstral-small-2:24b-cloud",
-			"description": "Ollama (Devstral Small 2 24B, agentic)"
+			"description": "Ollama (Devstral Small 2 24B, cloud)"
 		},
 		"ollama-local": {
 			"enabled": false,

@@ -6,7 +6,7 @@
 # Only run when validating README model documentation is accurate.
 #
 # NOTE: Ollama cloud models (`:cloud` suffix) require OLLAMA_API_KEY environment variable
-# and use `ollama launch claude` (agentic mode with tools/web search).
+# and run Claude Code pointed at Ollama's Anthropic-compatible API.
 # Get your API key at https://ollama.com
 #
 # NOTE: Grok models require GROK_API_KEY environment variable.
@@ -141,13 +141,14 @@ fi
 echo ""
 
 # Ollama models
-# Cloud models use `ollama launch claude` (agentic), local models use `ollama run`
+# Cloud models run Claude Code pointed at Ollama's API, local models use `ollama run`
 echo "--- Ollama ---"
 if [[ -n "$OLLAMA_API_KEY" ]]; then
-    # Recommended cloud models (agentic via ollama launch claude)
-    test_model "ollama" "minimax-m2.5:cloud" "ollama launch claude --model minimax-m2.5:cloud -- --print" true "CLAUDECODE=0"
-    test_model "ollama" "glm-5:cloud" "ollama launch claude --model glm-5:cloud -- --print" true "CLAUDECODE=0"
-    test_model "ollama" "kimi-k2.5:cloud" "ollama launch claude --model kimi-k2.5:cloud -- --print" true "CLAUDECODE=0"
+    OLLAMA_ENV="CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com"
+    # Recommended cloud models (via Ollama's Anthropic-compatible API)
+    test_model "ollama" "minimax-m2.5:cloud" "claude --print --model minimax-m2.5:cloud" true "$OLLAMA_ENV"
+    test_model "ollama" "glm-5:cloud" "claude --print --model glm-5:cloud" true "$OLLAMA_ENV"
+    test_model "ollama" "kimi-k2.5:cloud" "claude --print --model kimi-k2.5:cloud" true "$OLLAMA_ENV"
 else
     echo "  ○ cloud models skipped (OLLAMA_API_KEY not set)"
     ((skipped+=3))
