@@ -12,6 +12,20 @@
 			"model": "gpt-5.2-codex",
 			"description": "OpenAI Codex CLI"
 		},
+		"claude-opus": {
+			"enabled": true,
+			"scope": ["review", "consult"],
+			"command": "claude --print",
+			"model": "opus",
+			"description": "Claude Code (Opus)"
+		},
+		"claude-sonnet": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "claude --print",
+			"model": "sonnet",
+			"description": "Claude Code (Sonnet)"
+		},
 		"gemini": {
 			"enabled": false,
 			"scope": ["review", "consult"],

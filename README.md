@@ -18,23 +18,17 @@ Multi-model AI collaboration for [Claude Code](https://claude.com/claude-code). 
    │                                    │
    ├── Codex ───► reviews diff          ├── Codex ───► reads conversation
    ├── Gemini ──► reviews diff          ├── Gemini ──► reads conversation
-   ├── Qwen ───► reviews diff           ├── Qwen ───► reads conversation
+   ├── Claude ──► reviews diff          ├── Claude ──► reads conversation
    └── ...                              └── ...
    │                                    │
    ▼                                    ▼
-   Claude reviews the diff itself       Claude analyzes the problem itself
-   + synthesizes external findings      + synthesizes external perspectives
+   Consensus: issues flagged            Synthesis: consensus suggestions,
+   by 2+ models highlighted             unique perspectives, disagreements
 ```
-
-**Claude is always a reviewer.** The orchestrating Claude instance doesn't just
-synthesize what external tools report — it performs its own independent review of the
-code (or analysis of the problem) and includes its own findings alongside the external
-models. No need to configure Claude as an external tool.
 
 **Why multiple models?**
 - Different training data → different blind spots
 - 2+ models flagging the same issue → stronger signal
-- Claude's own review catches what external models miss
 - Diverse perspectives surface better solutions
 
 ## Inspiration
@@ -74,6 +68,13 @@ bun run unregister
       "model": "gpt-5.2-codex",
       "description": "OpenAI Codex CLI"
     },
+    "claude-opus": {
+      "enabled": true,
+      "scope": ["consult"],
+      "command": "claude --print",
+      "model": "opus",
+      "description": "Claude Code (Opus)"
+    },
     "gemini": {
       "enabled": true,
       "scope": ["review", "consult"],
@@ -99,7 +100,7 @@ bun run unregister
 | `model` | No | Model to use (injected via `--model` or `-m` flag) |
 | `description` | No | Human-readable description |
 
-You can define multiple entries for the same provider with different models (e.g., `ollama-qwen` and `ollama-devstral`).
+You can define multiple entries for the same provider with different models (e.g., `claude-opus` and `claude-sonnet`).
 
 #### Persistence Fields
 
@@ -119,6 +120,7 @@ Review results are saved as JSON files containing raw model outputs, timestamps,
 | Tool    | Models                                                                                                                         | Documentation                                                  |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | Codex   | `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`, `gpt-5.2`                                                          | [Codex Models](https://developers.openai.com/codex/models/)    |
+| Claude  | `opus`, `sonnet`, `haiku` (aliases) or full names like `claude-opus-4-5-20251101`                                              | [CLI Reference](https://code.claude.com/docs/en/cli-reference) |
 | Gemini  | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview`                                         | [Gemini CLI](https://geminicli.com/docs/cli/model/)            |
 | Qwen    | `coder-model` (default), `vision-model`                                                                                        | [Qwen Code Docs](https://qwenlm.github.io/qwen-code-docs/)     |
 | Mistral | Config-based (`~/.vibe/config.toml`)                                                                                           | [Mistral Vibe Docs](https://docs.mistral.ai/mistral-vibe/)     |
@@ -145,6 +147,7 @@ Customize prompts for each command:
 | Tool    | Install                                                                       |
 | ------- | ----------------------------------------------------------------------------- |
 | Codex   | `npm install -g @openai/codex`                                                |
+| Claude  | Built-in                                                                      |
 | Gemini  | `npm install -g @google/gemini-cli`                                           |
 | Qwen    | `npm install -g @qwen-code/qwen-code`                                         |
 | Mistral | `pipx install mistral-vibe`                                                   |

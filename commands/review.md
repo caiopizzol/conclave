@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash, Read, Write, Glob, Grep, Task, TaskOutput, AskUserQuestion
+allowed-tools: Bash, Read, Write, Glob, Grep, TaskOutput, AskUserQuestion
 description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini, Qwen, Mistral, Ollama, Grok) and synthesizes results interactively.
 ---
 
@@ -132,68 +132,95 @@ Replace template variables in the prompt:
 
 If no prompt file exists, use a default review prompt.
 
-### Step 4: Delegate to Multi-Model Executor
+### Step 4: Spawn Parallel Review Commands
 
 **State: `[SPAWNING]`**
 
-Delegate the parallel tool execution to the `multi-model-executor` sub-agent. This keeps all model outputs in the sub-agent's context, reducing main conversation bloat.
+For each **enabled** tool in the config, run background Bash commands.
 
-**Step 4a - Prepare tools JSON**:
+**Important**: Launch all commands in a SINGLE message with multiple Bash tool calls (using `run_in_background: true`) to run them in parallel.
 
-Extract the enabled tools for "review" scope from the config:
+**Step 4a - Write prompt file once**:
 
-```javascript
-// Filter tools: enabled=true AND (no scope OR scope includes "review")
-const eligibleTools = Object.entries(config.tools)
-  .filter(([key, tool]) => tool.enabled && (!tool.scope || tool.scope.includes("review")))
-  .reduce((acc, [key, tool]) => ({ ...acc, [key]: tool }), {});
+Write the review prompt to a single temp file (avoids shell escaping issues):
+
+```bash
+cat > /tmp/conclave-review-prompt.md << 'PROMPT_EOF'
+{review_prompt_with_variables_replaced}
+PROMPT_EOF
 ```
 
-**Step 4b - Launch executor sub-agent**:
+**Step 4b - Run review commands in background** (run ALL in parallel with `run_in_background: true`):
 
-Use the Task tool to spawn the multi-model-executor:
-
-```
-Task(
-  subagent_type: "multi-model-executor",
-  prompt: |
-    Execute this review prompt across multiple AI models.
-
-    **Prompt**:
-    {the full review prompt with variables replaced}
-
-    **Tools** (JSON):
-    {eligible tools object from config}
-
-    **Scope**: "review"
-    **Timeout**: 300000
-)
+For most tools (stdin-based):
+```bash
+cat /tmp/conclave-review-prompt.md | {final_command} 2>&1
 ```
 
-The sub-agent will:
-1. Write the prompt to a temp file
-2. Spawn all eligible tools in parallel
-3. Wait for completion
-4. Return structured JSON results
-
-**Step 4c - Receive results**:
-
-The sub-agent returns a JSON block in this format:
-
-```json
-{
-  "tools_run": ["codex", "claude", "gemini"],
-  "tools_skipped": ["ollama"],
-  "results": {
-    "codex": { "model": "gpt-5.2-codex", "success": true, "output": "..." },
-    "claude": { "model": "opus", "success": true, "output": "..." }
-  }
-}
+For Mistral Vibe and Grok (command substitution - do not accept stdin):
+```bash
+{final_command} "$(cat /tmp/conclave-review-prompt.md)" 2>&1
 ```
 
-Parse this JSON and store the results for persistence and synthesis.
+**Model Flag Injection**: If a tool has a `model` field specified, inject the model flag into the command:
 
-After receiving results, output: `[STATE: TOOLS_COMPLETE]`
+| Tool     | Model Flag | Injection Point             |
+| -------- | ---------- | --------------------------- |
+| codex    | `-m`       | Before the `-` stdin marker |
+| claude   | `--model`  | Appended to command         |
+| gemini   | `-m`       | Appended to command         |
+| qwen     | `-m`       | Appended to command         |
+| mistral  | N/A        | Model set via `~/.vibe/config.toml` |
+| ollama   | N/A        | Appended directly (no flag) |
+| grok     | `-m`       | Appended to command         |
+
+**Notes**:
+- Codex model injection requires the command to end with ` -` (stdin marker). If the command doesn't end with ` -`, skip model injection for that tool.
+- Model values should be simple identifiers (alphanumeric, dots, dashes). Do not include shell metacharacters.
+- If the user's command already includes a model flag (`-m` or `--model`), skip model injection to avoid duplicate flags.
+
+Command construction examples:
+
+```
+# Codex (model flag goes BEFORE the trailing `-`)
+Original: codex exec --full-auto -
+With model: codex exec --full-auto -m gpt-5.2-codex -
+
+# Claude (model flag appended)
+Original: claude --print
+With model: claude --print --model claude-opus-4-5-20251101
+
+# Gemini (model flag appended)
+Original: gemini -o text
+With model: gemini -o text -m gemini-2.5-pro
+
+# Qwen (model flag appended)
+Original: qwen -o text
+With model: qwen -o text -m coder-model
+
+# Mistral (no model flag - configured via ~/.vibe/config.toml)
+# Uses command substitution instead of stdin:
+vibe --output text -p "$(cat /tmp/conclave-review-prompt.md)"
+
+# Grok (model flag appended)
+# Uses command substitution instead of stdin:
+Original: grok -p
+With model: grok -p -m grok-code-fast-1
+grok -p -m grok-code-fast-1 "$(cat /tmp/conclave-review-prompt.md)"
+
+# Ollama (model appended directly, no flag)
+Original: ollama run
+With model: ollama run qwen2.5-coder:7b
+```
+
+Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
+
+**Step 4c - Wait for all background tasks** using TaskOutput tool:
+
+- Call TaskOutput for each background task ID
+- This will block until each completes and return the full output
+
+After ALL tools have returned, output: `[STATE: TOOLS_COMPLETE]`
 
 **IMPORTANT**: Proceed IMMEDIATELY to the persistence checkpoint. Do NOT synthesize or present results yet.
 
@@ -339,52 +366,23 @@ If verification succeeds OR `persistence.required` is `false`:
 
 ---
 
-### Step 6: Claude's Own Review + Synthesize Results
+### Step 6: Synthesize Results
 
 **State: `[PERSISTED]` → `[SYNTHESIZING]`**
 
-After persisting (or if persistence is disabled), **perform your own code review before synthesizing**.
-
-#### 6a: Your Own Review
-
-You have the full diff from Step 3. **Review it yourself** — don't just summarize what the external tools said. Read the diff line by line and look for:
-
-- Bugs, logic errors, off-by-one mistakes, edge cases
-- Security issues (injection, auth bypass, data leaks)
-- Performance problems (N+1 queries, unnecessary allocations, missing indexes)
-- Race conditions or concurrency issues
-- Missing error handling at system boundaries
-- Anything the external tools might have missed
-
-You are a reviewer too, not just a moderator. Form your own opinions about the code.
-
-#### 6b: Synthesize All Findings
-
-Now combine **your own findings** with the external model results. You count as a reviewer — if you and one external tool flag the same issue, that's consensus.
-
-**Comment style for synthesis**:
-- Use simple words -- say "pick one place" not "canonicalize", "cut in half" not "halve", "differs from" not "diverges from"
-- Concrete consequence first, then the technical detail
-- 1-3 sentences per finding
-- Lowercase start, no prefixes
-- End with a question when it's a design decision
-
-**Output format**:
-
-Group findings by consensus (flagged by multiple tools, including yourself) vs unique. For each finding:
+After persisting (or if persistence is disabled), structure the findings for presentation:
 
 ```
-**<file>:<lines>** -- <short title>
+## Review Results
 
-<1-3 sentence comment>
-```
+### From Codex (GPT-5.2)
+[codex findings]
 
-End with a summary table:
+### From Claude (Opus)
+[claude findings]
 
-```
-| Finding | Severity | Flagged by |
-|---------|----------|------------|
-| <short title> | Low/Medium/High | <which tools flagged it, include "claude (self)" for your own findings> |
+### From Gemini
+[gemini findings]
 ```
 
 ### Step 7: Deep Investigation
@@ -438,15 +436,12 @@ Launch the `review-investigator` sub-agent using the Task tool:
 ```
 subagent_type: review-investigator
 prompt: |
-  Investigate these code review findings with DEEP EXPLANATIONS.
+  Investigate these code review findings and draft comments.
 
   **Working Directory**: [worktree path from 7a]
   IMPORTANT: cd to this directory before investigating.
 
   **Branch**: [branch name]
-
-  **Context from Linear/ticket** (if available):
-  [any context about the feature, customer, requirements]
 
   **Diff Context**:
   [the diff being reviewed]
@@ -456,22 +451,18 @@ prompt: |
   2. [Issue from Tool B] - Line Y: description (CONSENSUS if flagged by multiple)
   ...
 
-  For each issue, provide a DEEP DIVE that enables human verification:
+  For each issue:
+  1. Read the relevant code to understand context
+  2. Explain why this is (or isn't) a real problem
+  3. Assign a verdict: `real_issue`, `false_positive`, or `needs_clarification`
+  4. If real_issue or needs_clarification: Draft an inline comment
 
-  1. **Read the actual code** - Don't trust the reviewer's description
-  2. **Trace the logic** - Walk through step by step what happens
-  3. **Explain what the code does** - Show snippets, trace data flow
-  4. **Explain why it might be a problem** - Specific mechanism of failure
-  5. **Explain why it might NOT be a problem** - Counter-arguments, guards
-  6. **Give your verdict** - real_issue, false_positive, or needs_clarification
-  7. **Draft inline comment** - If real_issue or needs_clarification
+  After investigating all issues, provide:
+  - **Summary**: Brief overview of findings (what's real, what's not)
+  - **Recommended action**: "Request changes" / "Comment" / "Approve"
+  - **Reason**: Why this action (e.g., "critical bug found" or "only minor suggestions")
 
-  The goal is human-in-the-loop verification. The reader should understand
-  the issue well enough to say "yes that makes sense" or "wait, that's wrong because..."
-
-  After all issues, provide summary with recommended action.
-
-  Output plain text, no emojis, no AI-speak.
+  Output plain text, no markdown formatting beyond code blocks, no emojis, no AI-speak.
 ```
 
 Wait for the investigator to complete, then proceed to Step 6 with the investigation results.
@@ -509,47 +500,40 @@ The `.quality` field contains structured issue verdicts for tracking model accur
 
 **If user declines**, skip to Step 8 with just the raw review summaries.
 
-### Step 8: Present Investigation Results
+### Step 8: Present Results for Approval
 
-The investigator returns **deep dive explanations** for each issue. Present them directly to the user for human-in-the-loop verification.
-
-The user should be able to:
-1. Read each deep dive and understand what the code actually does
-2. Verify if the problem assessment makes sense
-3. Decide which inline comments to post
-
-**Output format** (from investigator):
-
-The investigator returns deep dives for each issue. Present them using simple, plain language:
+If investigation was performed, present the investigation summary first, then each issue:
 
 ```
-**Issue N: [title]** -- [file:line]
-Priority: [CRITICAL/MEDIUM/LOW] | Flagged by: [reviewers]
-
-[What the code does -- 2-3 sentences with a code snippet]
-
-[Why it matters or doesn't -- 1-2 sentences]
-
-**Verdict: [real_issue / false_positive / needs_clarification]**
-
-**Draft comment**: [1-2 sentence comment in plain words, or "[skip]" for false positives]
-```
-
-After all issues:
-
-```
-### Summary
-
-| Verdict | Count | Details |
-|---------|-------|---------|
-| Real issues | N | [briefs] |
-| False positives | N | [briefs] |
-| Needs clarification | N | [briefs] |
+=== Investigation Summary ===
+Real issues: [count]
+False positives: [count]
+Needs clarification: [count]
 
 Recommended action: [Request changes / Comment / Approve]
+Reason: [brief reason from investigator]
+
+=== Issues Found ===
+
+[CRITICAL] Line X - Issue title
+Verdict: real_issue
+Draft: "the drafted comment"
+
+[MEDIUM] Line Y - Issue title
+Verdict: false_positive
+Reason: [why this isn't actually a problem]
+
+[LOW] Line Z - Issue title
+Verdict: needs_clarification
+Draft: "the drafted comment"
 ```
 
-**Do NOT automatically draft a final summary comment.** The user reviews inline comments and decides what to post.
+After presenting the summary, use AskUserQuestion to confirm the review action:
+
+"Investigation complete. Ready to draft the final review comment?"
+- "Yes, draft it" - Proceed to Step 9
+- "Let me review the inline comments first" - Present each draft for approval/editing
+- "Skip final comment" - End without summary comment
 
 If no investigation was performed, fall back to the standard synthesis:
 
@@ -557,14 +541,85 @@ If no investigation was performed, fall back to the standard synthesis:
 2. **Group by category** - bugs, security, performance, style
 3. **Highlight disagreements** - Where tools differ, present both perspectives
 
-### Step 9: User Reviews and Posts Comments
+Use AskUserQuestion to engage:
 
-The user reviews each deep dive explanation and decides:
-- Which inline comments to post on the PR
-- Whether to request changes, comment, or approve
-- If any issues need further discussion
+- "Codex and Claude both flagged a potential null reference at line 42. Should I create a fix?"
+- "Gemini suggests refactoring the auth module. Is this in scope for this review?"
+- "Some style suggestions were made. Do you want to see those or focus on bugs only?"
 
-The review is complete when the user has processed all findings.
+### Step 9: Draft Final Review Comment
+
+After investigation is complete and inline comments are drafted, generate a **final summary comment** for the GitHub PR review submission dialog.
+
+The final comment should:
+1. **Summarize the review** - Brief overview of what was reviewed and overall quality
+2. **List key findings** - Bullet points of the main issues (with severity)
+3. **Note false positives** - Mention any reviewer concerns that were dismissed and why
+4. **Recommend review action** - Suggest "Approve", "Comment", or "Request changes"
+
+**Output format**:
+
+```
+## Final Review Comment
+
+**Recommended action:** [Request changes / Comment / Approve]
+
+**Draft comment:**
+---
+[The actual comment text the user can copy/paste into GitHub]
+---
+
+Copy the text between the --- lines into the GitHub review dialog.
+```
+
+**Guidelines for the draft comment**:
+- Write like a colleague, not a formal report - conversational but concise
+- Use lowercase for casual observations, questions where appropriate
+- Ask questions instead of demanding changes when the issue isn't blocking
+- Skip bullet points for single issues - just say it naturally
+- Reference inline comments casually ("left a question inline about X")
+- Match the tone of how you'd talk in a quick Slack message or standup
+
+**Tone examples**:
+- Instead of: "**Bug in autospacing calculation** - when `lineRaw` is a small multiplier..."
+- Write: "the autospacing calc looks off when `lineRaw` is small - might produce near-zero spacing?"
+
+- Instead of: "Please confirm this is intentional."
+- Write: "is this intentional?"
+
+- Instead of: "Two items need attention:"
+- Write: "couple things:"
+
+**Example draft comments**:
+
+For "Request changes":
+```
+nice cleanup on the line spacing normalization. couple things:
+
+the autospacing calc looks off when `lineRaw` is ≤10 - it bypasses twips conversion which would give near-zero spacing for those docs.
+
+also converting `exact` to a multiplier makes it font-dependent - was that intentional?
+
+see inline comments for details.
+```
+
+For "Comment":
+```
+good fix for the percentage width handling. left a question inline about test coverage for the mixed pct/dxa scenario. lgtm otherwise.
+```
+
+For "Approve":
+```
+looks good. the spec-compliant autospacing handling is correct. minor suggestions inline.
+```
+
+### Step 10: Generate Action Items (Optional)
+
+If the user wants, generate:
+
+- A summary of actionable findings
+- Suggested fixes for critical issues
+- A checklist of items to address
 
 After completing all steps, output: `[STATE: COMPLETE]`
 
@@ -577,6 +632,7 @@ Most tools receive the prompt via stdin: `cat prompt.md | {command}`
 | Tool     | Default Command                    | Model Flag               | Notes                                                      |
 | -------- | ---------------------------------- | ------------------------ | ---------------------------------------------------------- |
 | Codex    | `codex exec --full-auto -`         | `-m` (insert before `-`) | `-` reads prompt from stdin, `--full-auto` skips approvals |
+| Claude   | `claude --print`                   | `--model` (append)       | `--print` outputs response without interactive mode        |
 | Gemini   | `gemini -o text`                   | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
 | Qwen     | `qwen -o text`                     | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
 | Mistral  | `vibe --output text -p`            | Config-based             | Uses command substitution: `vibe --output text -p "$(cat file)"` |

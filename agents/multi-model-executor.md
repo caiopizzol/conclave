@@ -2,7 +2,7 @@
 name: multi-model-executor
 description: "Execute prompts across multiple AI CLI tools in parallel and collect results. Used by skills that need multi-model consensus."
 tools: Bash, Read, Write, TaskOutput
-model: sonnet
+model: haiku
 ---
 
 # Multi-Model Executor
@@ -58,6 +58,7 @@ If a tool has a `model` field, inject it:
 | Tool     | Flag      | Injection                   |
 |----------|-----------|----------------------------|
 | codex    | `-m`      | Before trailing `-`        |
+| claude   | `--model` | Appended                   |
 | gemini   | `-m`      | Appended                   |
 | qwen     | `-m`      | Appended                   |
 | mistral  | N/A       | Config-based               |
@@ -66,32 +67,15 @@ If a tool has a `model` field, inject it:
 
 Skip injection if command already contains a model flag.
 
-### Step 3: Wait for ALL Tasks to Complete
+### Step 3: Collect Results
 
-**CRITICAL: You MUST wait for every single background task to complete before proceeding.**
-
-For each background task spawned in Step 2:
-1. Call `TaskOutput(task_id: "<task_id>", block: true, timeout: 300000)`
-2. This blocks until that specific task completes
-3. Store the result (output or error)
-
-**DO NOT proceed to Step 4 until you have called TaskOutput for EVERY task and received results.**
-
-Call TaskOutput for all tasks - you can call them in parallel in a single message:
-
-```
-TaskOutput(task_id: "abc123", block: true, timeout: 300000)
-TaskOutput(task_id: "def456", block: true, timeout: 300000)
-TaskOutput(task_id: "ghi789", block: true, timeout: 300000)
-```
+Use TaskOutput for each background task to wait for completion.
 
 Track for each tool:
 - `tool_name`: Key from config
 - `model`: Model used (if specified)
 - `success`: Whether it completed without error
 - `output`: Raw output text
-
-**Verification**: Before proceeding, confirm you have results for ALL spawned tasks.
 
 ### Step 4: Return Results
 
@@ -130,9 +114,7 @@ Output a single JSON block with all results:
 
 ## Important Notes
 
-- Use `timeout: 300000` (5 minutes) for each Bash call and TaskOutput call
-- **NEVER return early** - you MUST wait for ALL tasks to complete before outputting results
+- Use `timeout: 300000` (5 minutes) for each Bash call
 - Do NOT synthesize or analyze results - just collect and return
 - The parent skill handles interpretation of results
 - Keep output minimal - just the JSON block
-- If a task is still running, wait for it - do not skip or estimate results
