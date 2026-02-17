@@ -41,6 +41,14 @@ For each tool in the config:
 
 ### Tool Command Patterns
 
+**Environment override for nested Claude Code**:
+
+When running inside Claude Code, the `CLAUDECODE=1` environment variable prevents spawning nested `claude` sessions. For any tool whose command starts with `claude`, prefix the command with `CLAUDECODE=0` to allow it to run:
+
+```bash
+CLAUDECODE=0 cat /tmp/conclave-prompt.md | claude --print 2>&1
+```
+
 **Stdin-based tools** (most):
 ```bash
 cat /tmp/conclave-prompt.md | {command} 2>&1

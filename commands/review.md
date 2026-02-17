@@ -152,6 +152,12 @@ PROMPT_EOF
 
 **Step 4b - Run review commands in background** (run ALL in parallel with `run_in_background: true`):
 
+**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested `claude` sessions. For any tool whose command starts with `claude`, prefix with `CLAUDECODE=0`:
+
+```bash
+CLAUDECODE=0 cat /tmp/conclave-review-prompt.md | claude --print --model opus 2>&1
+```
+
 For most tools (stdin-based):
 ```bash
 cat /tmp/conclave-review-prompt.md | {final_command} 2>&1
