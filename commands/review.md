@@ -152,10 +152,14 @@ PROMPT_EOF
 
 **Step 4b - Run review commands in background** (run ALL in parallel with `run_in_background: true`):
 
-**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested `claude` sessions. For any tool whose command starts with `claude`, prefix with `CLAUDECODE=0`:
+**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command starts with `claude` or uses `ollama launch claude`:
 
 ```bash
-CLAUDECODE=0 cat /tmp/conclave-review-prompt.md | claude --print --model opus 2>&1
+# Claude tools
+cat /tmp/conclave-review-prompt.md | CLAUDECODE=0 claude --print --model opus 2>&1
+
+# Ollama cloud tools
+cat /tmp/conclave-review-prompt.md | CLAUDECODE=0 ollama launch claude --model minimax-m2.5:cloud -- --print 2>&1
 ```
 
 For most tools (stdin-based):
@@ -177,7 +181,7 @@ For Mistral Vibe and Grok (command substitution - do not accept stdin):
 | gemini   | `-m`       | Appended to command         |
 | qwen     | `-m`       | Appended to command         |
 | mistral  | N/A        | Model set via `~/.vibe/config.toml` |
-| ollama   | N/A        | Appended directly (no flag) |
+| ollama   | varies     | See Ollama examples below   |
 | grok     | `-m`       | Appended to command         |
 
 **Notes**:
@@ -214,9 +218,14 @@ Original: grok -p
 With model: grok -p -m grok-code-fast-1
 grok -p -m grok-code-fast-1 "$(cat /tmp/conclave-review-prompt.md)"
 
-# Ollama (model appended directly, no flag)
+# Ollama local (model appended directly, no flag)
 Original: ollama run
 With model: ollama run qwen2.5-coder:7b
+
+# Ollama cloud (--model flag before --, requires CLAUDECODE=0)
+Original: ollama launch claude -- --print
+With model: ollama launch claude --model qwen3-coder:480b-cloud -- --print
+Final: cat /tmp/prompt.md | CLAUDECODE=0 ollama launch claude --model qwen3-coder:480b-cloud -- --print 2>&1
 ```
 
 Use `timeout: 300000` (5 minutes) for each command since AI tools can be slow.
@@ -643,13 +652,15 @@ Most tools receive the prompt via stdin: `cat prompt.md | {command}`
 | Qwen     | `qwen -o text`                     | `-m` (append)            | Reads prompt from stdin, `-o text` for plain output        |
 | Mistral  | `vibe --output text -p`            | Config-based             | Uses command substitution: `vibe --output text -p "$(cat file)"` |
 | Grok     | `grok -p`                          | `-m` (append)            | Uses command substitution: `grok -p -m model "$(cat file)"` |
-| Ollama   | `ollama run`                       | Appended directly        | Model appended without flag: `ollama run <model>`          |
+| Ollama (local) | `ollama run`                  | Appended directly        | Model appended without flag: `ollama run <model>`          |
+| Ollama (cloud) | `ollama launch claude -- --print` | `--model` (before `--`) | Agentic mode with tools/web search. Requires `CLAUDECODE=0` |
 
 **Notes**:
 - All tools read from the same prompt file (`/tmp/conclave-review-prompt.md`) written once in Step 4a.
 - Mistral Vibe does not accept stdin; prompt must be passed via `-p` flag using command substitution.
 - Mistral model selection is done via `~/.vibe/config.toml` (`active_model` setting), not CLI flags.
 - Grok CLI does not accept stdin; prompt must be passed via `-p` flag using command substitution (like Mistral).
+- Ollama cloud models (`:cloud` suffix) use `ollama launch claude` which runs a full agentic session. The model gets access to file read, grep, bash, web search, and subagents.
 - **Limitation**: Mistral and Grok's command-line argument passing has a ~200KB limit (ARG_MAX). Very large diffs may fail.
 
 ---

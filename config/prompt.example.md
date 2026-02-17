@@ -14,14 +14,42 @@ When reviewing the diff:
 2. **Consider readability** - Is the code clear and maintainable? Does it follow best practices?
 3. **Evaluate performance** - Are there obvious performance concerns or optimizations?
 4. **Assess test coverage** - Are there adequate tests for these changes?
-5. **Ask clarifying questions** - Ask for clarification if unsure about the changes.
-6. **Don't be overly pedantic** - Nitpicks are fine, but only if relevant.
+5. **Don't be overly pedantic** - Nitpicks are fine, but only if relevant.
 
-In your output:
+## Comment Style
 
-- Provide a summary overview of the general code quality.
-- Present issues in a table with columns: index, line number(s), code, issue, and potential solution(s).
-- If no issues are found, briefly state that the code meets best practices.
+Write each finding as a short comment (1-3 sentences). Think teammate leaving a quick note, not writing a paper.
+
+**Rules**:
+- Concrete consequence first, then the technical detail
+- End with a question when it's a design decision
+- Lowercase start, no prefixes like "nit:" or "suggestion:"
+- Use simple words -- say "pick one place" not "canonicalize", "cut in half" not "halve", "differs from" not "diverges from"
+- Don't hedge ("I think maybe this could potentially...") -- just say what the issue is
+- Don't over-explain -- if the code is right there, trust the reader to follow
+- Skip pleasantries and filler
+
+## Output Format
+
+Start with a 2-3 sentence summary of overall code quality.
+
+Then list each finding:
+
+```
+**<file>:<lines>** -- <short title>
+
+<1-3 sentence comment>
+```
+
+End with a summary table:
+
+```
+| Finding | Severity | Action |
+|---------|----------|--------|
+| <short title> | Low/Medium/High | <what to do> |
+```
+
+If no issues are found, briefly state that the code looks good.
 
 ## Full Diff
 

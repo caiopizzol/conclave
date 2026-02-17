@@ -51,19 +51,61 @@
 			"model": "grok-code-fast-1",
 			"description": "xAI Grok CLI (community)"
 		},
+		"ollama-minimax": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama launch claude -- --print",
+			"model": "minimax-m2.5:cloud",
+			"description": "Ollama (MiniMax M2.5, agentic)"
+		},
+		"ollama-glm": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama launch claude -- --print",
+			"model": "glm-5:cloud",
+			"description": "Ollama (GLM-5, agentic)"
+		},
+		"ollama-kimi": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama launch claude -- --print",
+			"model": "kimi-k2.5:cloud",
+			"description": "Ollama (Kimi K2.5, agentic)"
+		},
 		"ollama-qwen": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama run",
+			"command": "ollama launch claude -- --print",
 			"model": "qwen3-coder:480b-cloud",
-			"description": "Ollama (Qwen3 Coder 480B)"
+			"description": "Ollama (Qwen3 Coder 480B, agentic)"
 		},
 		"ollama-devstral": {
 			"enabled": false,
 			"scope": ["review", "consult"],
-			"command": "ollama run",
+			"command": "ollama launch claude -- --print",
 			"model": "devstral-2:123b-cloud",
-			"description": "Ollama (Devstral 2 123B)"
+			"description": "Ollama (Devstral 2 123B, agentic)"
+		},
+		"ollama-deepseek": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama launch claude -- --print",
+			"model": "deepseek-v3.2:cloud",
+			"description": "Ollama (DeepSeek V3.2, agentic)"
+		},
+		"ollama-rnj": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama launch claude -- --print",
+			"model": "rnj-1:8b-cloud",
+			"description": "Ollama (RNJ-1 8B, agentic)"
+		},
+		"ollama-devstral-small": {
+			"enabled": false,
+			"scope": ["review", "consult"],
+			"command": "ollama launch claude -- --print",
+			"model": "devstral-small-2:24b-cloud",
+			"description": "Ollama (Devstral Small 2 24B, agentic)"
 		},
 		"ollama-local": {
 			"enabled": false,
@@ -71,48 +113,6 @@
 			"command": "ollama run",
 			"model": "qwen2.5-coder:7b",
 			"description": "Ollama (Qwen 2.5 Coder 7B, local)"
-		},
-		"ollama-kimi": {
-			"enabled": false,
-			"scope": ["review", "consult"],
-			"command": "ollama run",
-			"model": "kimi-k2:1t-cloud",
-			"description": "Ollama (Kimi K2 1T)"
-		},
-		"ollama-glm": {
-			"enabled": false,
-			"scope": ["review", "consult"],
-			"command": "ollama run",
-			"model": "glm-4.7:cloud",
-			"description": "Ollama (GLM-4.7)"
-		},
-		"ollama-deepseek": {
-			"enabled": false,
-			"scope": ["review", "consult"],
-			"command": "ollama run",
-			"model": "deepseek-v3.2:cloud",
-			"description": "Ollama (DeepSeek V3.2)"
-		},
-		"ollama-rnj": {
-			"enabled": false,
-			"scope": ["review", "consult"],
-			"command": "ollama run",
-			"model": "rnj-1:8b-cloud",
-			"description": "Ollama (RNJ-1 8B, code/STEM optimized)"
-		},
-		"ollama-devstral-small": {
-			"enabled": false,
-			"scope": ["review", "consult"],
-			"command": "ollama run",
-			"model": "devstral-small-2:24b-cloud",
-			"description": "Ollama (Devstral Small 2 24B, vision+tools)"
-		},
-		"ollama-minimax": {
-			"enabled": false,
-			"scope": ["review", "consult"],
-			"command": "ollama run",
-			"model": "minimax-m2:cloud",
-			"description": "Ollama (MiniMax M2, coding/agentic)"
 		}
 	},
 	"prompts": {

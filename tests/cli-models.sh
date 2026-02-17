@@ -5,7 +5,8 @@
 # WARNING: This runs many API calls (one per model) and incurs significant costs.
 # Only run when validating README model documentation is accurate.
 #
-# NOTE: Ollama cloud models (`:cloud` suffix) require OLLAMA_API_KEY environment variable.
+# NOTE: Ollama cloud models (`:cloud` suffix) require OLLAMA_API_KEY environment variable
+# and use `ollama launch claude` (agentic mode with tools/web search).
 # Get your API key at https://ollama.com
 #
 # NOTE: Grok models require GROK_API_KEY environment variable.
@@ -48,10 +49,13 @@ test_model() {
         return 2
     fi
 
+    # Build env prefix (e.g., CLAUDECODE=0 for nested Claude Code sessions)
+    local env_prefix="${5:-}"
+
     if [ "$use_stdin" = "true" ]; then
-        result=$(echo "$PROMPT" | $timeout_cmd $TIMEOUT $cmd 2>&1)
+        result=$(echo "$PROMPT" | $env_prefix $timeout_cmd $TIMEOUT $cmd 2>&1)
     else
-        result=$($timeout_cmd $TIMEOUT $cmd "$PROMPT" 2>&1)
+        result=$($env_prefix $timeout_cmd $TIMEOUT $cmd "$PROMPT" 2>&1)
     fi
 
     exit_code=$?
@@ -137,15 +141,18 @@ fi
 echo ""
 
 # Ollama models
-# Cloud models require OLLAMA_API_KEY, local models must be pulled first
+# Cloud models use `ollama launch claude` (agentic), local models use `ollama run`
 echo "--- Ollama ---"
 if [[ -n "$OLLAMA_API_KEY" ]]; then
-    test_model "ollama" "qwen3-coder:480b-cloud" "ollama run qwen3-coder:480b-cloud" true
-    test_model "ollama" "devstral-2:123b-cloud" "ollama run devstral-2:123b-cloud" true
+    # Recommended cloud models (agentic via ollama launch claude)
+    test_model "ollama" "minimax-m2.5:cloud" "ollama launch claude --model minimax-m2.5:cloud -- --print" true "CLAUDECODE=0"
+    test_model "ollama" "glm-5:cloud" "ollama launch claude --model glm-5:cloud -- --print" true "CLAUDECODE=0"
+    test_model "ollama" "kimi-k2.5:cloud" "ollama launch claude --model kimi-k2.5:cloud -- --print" true "CLAUDECODE=0"
 else
     echo "  ○ cloud models skipped (OLLAMA_API_KEY not set)"
-    ((skipped+=2))
+    ((skipped+=3))
 fi
+# Local model (text-only via ollama run)
 test_model "ollama" "qwen2.5-coder:7b" "ollama run qwen2.5-coder:7b" true
 echo ""
 

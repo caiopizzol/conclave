@@ -5,7 +5,7 @@
 # WARNING: This runs real API calls and incurs costs.
 # Only run when you need to verify tools are working end-to-end.
 #
-# NOTE: Ollama cloud models require OLLAMA_API_KEY environment variable.
+# NOTE: Ollama cloud models require OLLAMA_API_KEY and use `ollama launch claude` (agentic mode).
 # NOTE: Grok requires GROK_API_KEY environment variable.
 
 set -eo pipefail
@@ -46,10 +46,13 @@ test_tool() {
         return 2
     fi
 
+    # Build env prefix (e.g., CLAUDECODE=0 for nested Claude Code sessions)
+    local env_prefix="${4:-}"
+
     if [ "$use_stdin" = "true" ]; then
-        result=$(echo "$PROMPT" | $timeout_cmd $TIMEOUT $cmd 2>&1)
+        result=$(echo "$PROMPT" | $env_prefix $timeout_cmd $TIMEOUT $cmd 2>&1)
     else
-        result=$($timeout_cmd $TIMEOUT $cmd "$PROMPT" 2>&1)
+        result=$($env_prefix $timeout_cmd $TIMEOUT $cmd "$PROMPT" 2>&1)
     fi
 
     exit_code=$?
@@ -97,11 +100,15 @@ else
     echo "  ○ grok skipped (GROK_API_KEY not set)"
     ((skipped++))
 fi
-# Skip ollama cloud models if API key not set
-if [[ "$MODEL_OLLAMA" == *"-cloud"* ]] && [[ -z "$OLLAMA_API_KEY" ]]; then
-    echo "Testing ollama..."
-    echo "  ○ ollama skipped (cloud model requires OLLAMA_API_KEY)"
-    ((skipped++))
+# Ollama: cloud models use `ollama launch claude` (agentic), local uses `ollama run`
+if [[ "$MODEL_OLLAMA" == *":cloud"* ]]; then
+    if [[ -z "$OLLAMA_API_KEY" ]]; then
+        echo "Testing ollama..."
+        echo "  ○ ollama skipped (cloud model requires OLLAMA_API_KEY)"
+        ((skipped++))
+    else
+        test_tool "ollama" "ollama launch claude --model $MODEL_OLLAMA -- --print" true "CLAUDECODE=0"
+    fi
 else
     test_tool "ollama" "ollama run $MODEL_OLLAMA" true
 fi

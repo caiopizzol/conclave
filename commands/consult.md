@@ -125,10 +125,14 @@ PROMPT_EOF
 
 **Step 5b - Run consultation commands in background** (run ALL in parallel with `run_in_background: true`):
 
-**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested `claude` sessions. For any tool whose command starts with `claude`, prefix with `CLAUDECODE=0`:
+**Environment override for nested Claude Code**: When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command starts with `claude` or uses `ollama launch claude`:
 
 ```bash
-CLAUDECODE=0 cat /tmp/conclave-consult-prompt.md | claude --print --model opus 2>&1
+# Claude tools
+cat /tmp/conclave-consult-prompt.md | CLAUDECODE=0 claude --print --model opus 2>&1
+
+# Ollama cloud tools
+cat /tmp/conclave-consult-prompt.md | CLAUDECODE=0 ollama launch claude --model minimax-m2.5:cloud -- --print 2>&1
 ```
 
 For stdin-based tools:
@@ -239,7 +243,8 @@ Same as `/review` - see `~/.config/conclave/tools.json` for enabled tools.
 | Qwen     | `qwen -o text`                     | `-m` (append)            |
 | Mistral  | `vibe --output text -p`            | Config-based             |
 | Grok     | `grok -p`                          | `-m` (append)            |
-| Ollama   | `ollama run`                       | Appended directly        |
+| Ollama (local) | `ollama run`                  | Appended directly        |
+| Ollama (cloud) | `ollama launch claude -- --print` | `--model` (before `--`) |
 
 ## Error Handling
 
