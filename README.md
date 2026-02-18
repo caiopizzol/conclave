@@ -125,9 +125,9 @@ Review results are saved as JSON files containing raw model outputs, timestamps,
 | Qwen    | `coder-model` (default), `vision-model`                                                                                        | [Qwen Code Docs](https://qwenlm.github.io/qwen-code-docs/)     |
 | Mistral | Config-based (`~/.vibe/config.toml`)                                                                                           | [Mistral Vibe Docs](https://docs.mistral.ai/mistral-vibe/)     |
 | Grok    | `grok-code-fast-1`, `grok-4-1-fast-*`, `grok-4-fast-*`, `grok-3`, `grok-3-mini`                                                 | [xAI API Models](https://docs.x.ai/docs/models)                |
-| Ollama  | Cloud (recommended): `minimax-m2.5:cloud`, `glm-5:cloud`, `kimi-k2.5:cloud`, or any model from library | [Ollama Library](https://ollama.com/library) |
+| Ollama  | Cloud: `minimax-m2.5:cloud`, `glm-5:cloud`, `kimi-k2.5:cloud`, or any model from [library](https://ollama.com/library). Local: `qwen2.5-coder:7b` | [Ollama Library](https://ollama.com/library) |
 
-> **Note:** Ollama cloud models (`:cloud` suffix) run Claude Code pointed at Ollama's Anthropic-compatible API (`ANTHROPIC_BASE_URL=https://ollama.com`). This gives cloud models full agentic capabilities — tools, file access, and subagents. Requires `OLLAMA_API_KEY`. Get your API key at [ollama.com](https://ollama.com). Local models (e.g., `qwen2.5-coder:7b`) use `ollama run` (text-only), are slower, and require significant memory (~8GB+ RAM for 7B models).
+> **Note:** Ollama models use `ollama run` directly. Cloud models (`:cloud` suffix) require an Ollama account — sign up at [ollama.com](https://ollama.com). Local models (e.g., `qwen2.5-coder:7b`) run on your machine and require ~8GB+ RAM for 7B models.
 
 > **Note:** Mistral and Grok use command-line argument passing (not stdin), which has a ~200KB limit on macOS. Very large diffs may cause these tools to fail while other tools succeed.
 
@@ -152,7 +152,7 @@ Customize prompts for each command:
 | Qwen    | `npm install -g @qwen-code/qwen-code`                                         |
 | Mistral | `pipx install mistral-vibe`                                                   |
 | Grok    | `bun add -g @vibe-kit/grok-cli`; `export GROK_API_KEY="key"` in `~/.zshrc`    |
-| Ollama  | [ollama.com/download](https://ollama.com/download); cloud: `export OLLAMA_API_KEY="key"` in `~/.zshrc`; local: `ollama pull <model>` |
+| Ollama  | [ollama.com/download](https://ollama.com/download); cloud: `ollama login`; local: `ollama pull <model>` |
 
 ## Usage
 

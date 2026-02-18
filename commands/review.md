@@ -136,27 +136,59 @@ If no prompt file exists, use a default review prompt.
 
 **State: `[SPAWNING]`**
 
-Delegate parallel execution to the `multi-model-executor` sub-agent using the Task tool. This keeps raw model outputs out of the orchestrator's context window.
+#### 4a: Write Prompt File
+
+Write the complete review prompt to a temp file:
+
+```bash
+cat > /tmp/conclave-prompt.md << 'PROMPT_EOF'
+{the complete review prompt from Step 3b, with all template variables replaced}
+PROMPT_EOF
+```
+
+#### 4b: Build Shell Scripts
+
+For each eligible tool (filtered in Step 2), write a shell script using the Write tool.
+
+The `command` field in the config is **complete** — it includes env vars, model flags, everything. Just plug it in.
+
+**For stdin-based tools** (command does NOT contain `-p`), write `/tmp/conclave-run-{tool_name}.sh`:
+```bash
+#!/bin/bash -l
+cat /tmp/conclave-prompt.md | {command from config} 2>&1
+```
+
+**For flag-based tools** (command contains `-p`), write `/tmp/conclave-run-{tool_name}.sh`:
+```bash
+#!/bin/bash -l
+{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1
+```
+
+**Example**: For a tool with `"command": "ollama run minimax-m2.5:cloud"`, write:
+```bash
+#!/bin/bash -l
+cat /tmp/conclave-prompt.md | ollama run minimax-m2.5:cloud 2>&1
+```
+
+#### 4c: Delegate Execution
+
+Spawn the `multi-model-executor` sub-agent to run all scripts in parallel:
 
 ```
 Task tool call:
   subagent_type: multi-model-executor
   prompt: |
-    Execute this review prompt across all eligible tools.
+    Run these commands in parallel and collect results.
 
-    **Scope**: review
     **Timeout**: 300000
 
-    **Prompt**:
-    <prompt>
-    {the complete review prompt from Step 3b, with all template variables replaced}
-    </prompt>
-
-    **Tools**:
-    {the full "tools" JSON object from the user's config}
+    **Commands**:
+    - name: {tool_name}, model: {model}, script: /tmp/conclave-run-{tool_name}.sh
+    - name: {tool_name}, model: {model}, script: /tmp/conclave-run-{tool_name}.sh
+    ...
 ```
 
-The executor handles everything: writing the prompt file, filtering by scope, spawning tools in parallel, model flag injection, CLAUDECODE=0 prefixing, and collecting results. It returns a structured JSON block.
+The executor runs each script via `bash -l` in background and returns structured JSON results.
 
 After the executor returns, parse the JSON `results` object to extract each tool's output. Output: `[STATE: TOOLS_COMPLETE]`
 

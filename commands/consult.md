@@ -111,27 +111,53 @@ If no prompt file exists, use the default embedded prompt.
 
 ### Step 5: Spawn Parallel Consultations
 
-Delegate parallel execution to the `multi-model-executor` sub-agent using the Task tool. This keeps raw model outputs out of the orchestrator's context window.
+#### 5a: Write Prompt File
+
+Write the complete consultation prompt to a temp file:
+
+```bash
+cat > /tmp/conclave-prompt.md << 'PROMPT_EOF'
+{the complete consultation prompt from Step 4, with all template variables replaced}
+PROMPT_EOF
+```
+
+#### 5b: Build Shell Scripts
+
+For each eligible tool (filtered in Step 2), write a shell script using the Write tool.
+
+The `command` field in the config is **complete** — it includes env vars, model flags, everything. Just plug it in.
+
+**For stdin-based tools** (command does NOT contain `-p`), write `/tmp/conclave-run-{tool_name}.sh`:
+```bash
+#!/bin/bash -l
+cat /tmp/conclave-prompt.md | {command from config} 2>&1
+```
+
+**For flag-based tools** (command contains `-p`), write `/tmp/conclave-run-{tool_name}.sh`:
+```bash
+#!/bin/bash -l
+{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1
+```
+
+#### 5c: Delegate Execution
+
+Spawn the `multi-model-executor` sub-agent to run all scripts in parallel:
 
 ```
 Task tool call:
   subagent_type: multi-model-executor
   prompt: |
-    Execute this consultation prompt across all eligible tools.
+    Run these commands in parallel and collect results.
 
-    **Scope**: consult
     **Timeout**: 300000
 
-    **Prompt**:
-    <prompt>
-    {the complete consultation prompt from Step 4, with all template variables replaced}
-    </prompt>
-
-    **Tools**:
-    {the full "tools" JSON object from the user's config}
+    **Commands**:
+    - name: {tool_name}, model: {model}, script: /tmp/conclave-run-{tool_name}.sh
+    - name: {tool_name}, model: {model}, script: /tmp/conclave-run-{tool_name}.sh
+    ...
 ```
 
-The executor handles everything: writing the prompt file, filtering by scope, spawning tools in parallel, model flag injection, CLAUDECODE=0 prefixing, and collecting results. It returns a structured JSON block.
+The executor runs each script via `bash -l` in background and returns structured JSON results.
 
 After the executor returns, parse the JSON `results` object to extract each tool's output.
 

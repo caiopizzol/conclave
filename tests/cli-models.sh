@@ -5,9 +5,7 @@
 # WARNING: This runs many API calls (one per model) and incurs significant costs.
 # Only run when validating README model documentation is accurate.
 #
-# NOTE: Ollama cloud models (`:cloud` suffix) require OLLAMA_API_KEY environment variable
-# and run Claude Code pointed at Ollama's Anthropic-compatible API.
-# Get your API key at https://ollama.com
+# NOTE: Ollama cloud models (`:cloud` suffix) require an Ollama account (ollama login).
 #
 # NOTE: Grok models require GROK_API_KEY environment variable.
 # Get your API key at https://console.x.ai
@@ -140,21 +138,19 @@ else
 fi
 echo ""
 
-# Ollama models
-# Cloud models run Claude Code pointed at Ollama's API, local models use `ollama run`
+# Ollama models — all use `ollama run` directly
 echo "--- Ollama ---"
-if [[ -n "$OLLAMA_API_KEY" ]]; then
-    OLLAMA_ENV="CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com"
-    # Recommended cloud models (via Ollama's Anthropic-compatible API)
-    test_model "ollama" "minimax-m2.5:cloud" "claude --print --model minimax-m2.5:cloud" true "$OLLAMA_ENV"
-    test_model "ollama" "glm-5:cloud" "claude --print --model glm-5:cloud" true "$OLLAMA_ENV"
-    test_model "ollama" "kimi-k2.5:cloud" "claude --print --model kimi-k2.5:cloud" true "$OLLAMA_ENV"
+if command -v ollama &>/dev/null; then
+    # Cloud models (require ollama login)
+    test_model "ollama" "minimax-m2.5:cloud" "ollama run minimax-m2.5:cloud" true
+    test_model "ollama" "glm-5:cloud" "ollama run glm-5:cloud" true
+    test_model "ollama" "kimi-k2.5:cloud" "ollama run kimi-k2.5:cloud" true
+    # Local model
+    test_model "ollama" "qwen2.5-coder:7b" "ollama run qwen2.5-coder:7b" true
 else
-    echo "  ○ cloud models skipped (OLLAMA_API_KEY not set)"
-    ((skipped+=3))
+    echo "  ○ ollama models skipped (ollama not installed)"
+    ((skipped+=4))
 fi
-# Local model (text-only via ollama run)
-test_model "ollama" "qwen2.5-coder:7b" "ollama run qwen2.5-coder:7b" true
 echo ""
 
 echo "======================"

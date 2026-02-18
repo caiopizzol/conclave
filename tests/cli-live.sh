@@ -5,7 +5,7 @@
 # WARNING: This runs real API calls and incurs costs.
 # Only run when you need to verify tools are working end-to-end.
 #
-# NOTE: Ollama cloud models require OLLAMA_API_KEY and run Claude Code via Ollama's API.
+# NOTE: Ollama cloud models require an Ollama account (ollama login).
 # NOTE: Grok requires GROK_API_KEY environment variable.
 
 set -eo pipefail
@@ -100,18 +100,8 @@ else
     echo "  ○ grok skipped (GROK_API_KEY not set)"
     ((skipped++))
 fi
-# Ollama: cloud models run Claude Code via Ollama's API, local uses `ollama run`
-if [[ "$MODEL_OLLAMA" == *":cloud"* ]]; then
-    if [[ -z "$OLLAMA_API_KEY" ]]; then
-        echo "Testing ollama..."
-        echo "  ○ ollama skipped (cloud model requires OLLAMA_API_KEY)"
-        ((skipped++))
-    else
-        test_tool "ollama" "claude --print --model $MODEL_OLLAMA" true "CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com"
-    fi
-else
-    test_tool "ollama" "ollama run $MODEL_OLLAMA" true
-fi
+# Ollama: all models use `ollama run` directly
+test_tool "ollama" "ollama run $MODEL_OLLAMA" true
 
 echo ""
 echo "Results: $passed passed, $failed failed, $skipped skipped"
