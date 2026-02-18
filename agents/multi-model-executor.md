@@ -2,7 +2,7 @@
 name: multi-model-executor
 description: "Execute prompts across multiple AI CLI tools in parallel and collect results. Used by skills that need multi-model consensus."
 tools: Bash, Read, Write, TaskOutput
-model: haiku
+model: sonnet
 ---
 
 # Multi-Model Executor
@@ -39,33 +39,56 @@ For each tool in the config:
 
 **Spawn ALL eligible tools in a SINGLE message** with multiple Bash calls using `run_in_background: true`.
 
-### Tool Command Patterns
+### Command Construction
 
-**Environment override for nested Claude Code**:
+For each tool, construct the final bash command using this pattern:
 
-When running inside Claude Code, `CLAUDECODE=1` prevents spawning nested sessions. Prefix with `CLAUDECODE=0` for any tool whose command contains `claude`:
+**The command from the config goes AFTER the pipe, never before it.**
+
+```
+cat /tmp/conclave-prompt.md | {CLAUDECODE=0 if needed} {command from config} {model flag if needed} 2>&1
+```
+
+**CRITICAL: Environment variables go AFTER the pipe, BEFORE the command.** This is because env vars set before `cat` only apply to `cat`, not to the command after the pipe.
 
 ```bash
-# Claude tools
-cat /tmp/conclave-prompt.md | CLAUDECODE=0 claude --print 2>&1
+# CORRECT — env vars apply to claude:
+cat /tmp/conclave-prompt.md | CLAUDECODE=0 claude --print --model opus 2>&1
 
-# Ollama cloud tools (runs Claude Code pointed at Ollama's API)
+# WRONG — env vars apply to cat, not claude:
+CLAUDECODE=0 cat /tmp/conclave-prompt.md | claude --print --model opus 2>&1
+```
+
+#### CLAUDECODE=0 Rule
+
+Any tool whose `command` field contains the word `claude` needs `CLAUDECODE=0` inserted after the pipe, before the command. This prevents nested Claude Code session errors.
+
+#### Complete Examples
+
+```bash
+# Codex (stdin-based, no CLAUDECODE needed)
+cat /tmp/conclave-prompt.md | codex exec --full-auto -m gpt-5.2-codex - 2>&1
+
+# Claude (needs CLAUDECODE=0)
+cat /tmp/conclave-prompt.md | CLAUDECODE=0 claude --print --model opus 2>&1
+
+# Gemini (stdin-based, no CLAUDECODE needed)
+cat /tmp/conclave-prompt.md | gemini -o text -m gemini-3-pro-preview 2>&1
+
+# Ollama cloud (command contains "claude", needs CLAUDECODE=0)
 cat /tmp/conclave-prompt.md | CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud 2>&1
-```
 
-**Stdin-based tools** (most):
-```bash
-cat /tmp/conclave-prompt.md | {command} 2>&1
-```
+# Ollama local (no CLAUDECODE needed)
+cat /tmp/conclave-prompt.md | ollama run qwen2.5-coder:7b 2>&1
 
-**Command substitution tools** (Mistral Vibe, Grok):
-```bash
-{command} "$(cat /tmp/conclave-prompt.md)" 2>&1
+# Mistral/Grok (command substitution, no stdin)
+vibe --output text -p "$(cat /tmp/conclave-prompt.md)" 2>&1
+grok -p -m grok-code-fast-1 "$(cat /tmp/conclave-prompt.md)" 2>&1
 ```
 
 ### Model Flag Injection
 
-If a tool has a `model` field, inject it:
+If a tool has a `model` field, inject the model into the command:
 
 | Tool     | Flag      | Injection                   |
 |----------|-----------|----------------------------|
@@ -74,26 +97,12 @@ If a tool has a `model` field, inject it:
 | gemini   | `-m`      | Appended                   |
 | qwen     | `-m`      | Appended                   |
 | mistral  | N/A       | Config-based               |
-| ollama   | varies    | See Ollama section below   |
 | grok     | `-m`      | Appended                   |
+| ollama (local) | N/A | Model appended directly    |
 
-Skip injection if command already contains a model flag.
+For Ollama cloud models, the command already contains `claude --print`, so use `--model` (same as regular Claude).
 
-### Ollama Command Pattern
-
-Ollama has two command patterns depending on model type:
-
-**Cloud models** (`:cloud` suffix) — run Claude Code pointed at Ollama's Anthropic-compatible API:
-- Command: `ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print`
-- Model injection: `--model` flag appended (same as regular Claude)
-- Requires `CLAUDECODE=0` prefix (since it runs `claude`)
-- Requires `OLLAMA_API_KEY` env var
-- Example: `cat /tmp/conclave-prompt.md | CLAUDECODE=0 ANTHROPIC_AUTH_TOKEN=$OLLAMA_API_KEY ANTHROPIC_API_KEY= ANTHROPIC_BASE_URL=https://ollama.com claude --print --model glm-5:cloud 2>&1`
-
-**Local models** (no `:cloud` suffix) — use `ollama run` (text-only):
-- Command: `ollama run`
-- Model injection: Appended directly (no flag)
-- Example: `cat /tmp/conclave-prompt.md | ollama run qwen2.5-coder:7b 2>&1`
+Skip injection if command already contains a model flag (`-m` or `--model`).
 
 ### Step 3: Collect Results
 
