@@ -64,8 +64,8 @@ bun run unregister
     "codex": {
       "enabled": true,
       "scope": ["review", "consult"],
-      "command": "codex exec --full-auto -",
-      "model": "gpt-5.2-codex",
+      "command": "codex exec --full-auto -m gpt-5.3-codex -c model_reasoning_effort=\"xhigh\" -",
+      "model": "gpt-5.3-codex",
       "description": "OpenAI Codex CLI"
     },
     "claude-opus": {
@@ -119,7 +119,7 @@ Review results are saved as JSON files containing raw model outputs, timestamps,
 
 | Tool    | Models                                                                                                                         | Documentation                                                  |
 | ------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| Codex   | `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`, `gpt-5.2`                                                          | [Codex Models](https://developers.openai.com/codex/models/)    |
+| Codex   | `gpt-5.3-codex`, `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`                                                    | [Codex Models](https://developers.openai.com/codex/models/)    |
 | Claude  | `opus`, `sonnet`, `haiku` (aliases) or full names like `claude-opus-4-5-20251101`                                              | [CLI Reference](https://code.claude.com/docs/en/cli-reference) |
 | Gemini  | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview`                                         | [Gemini CLI](https://geminicli.com/docs/cli/model/)            |
 | Qwen    | `coder-model` (default), `vision-model`                                                                                        | [Qwen Code Docs](https://qwenlm.github.io/qwen-code-docs/)     |

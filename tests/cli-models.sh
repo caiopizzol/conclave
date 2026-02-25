@@ -89,10 +89,10 @@ echo ""
 
 # Codex models (4)
 echo "--- Codex ---"
+test_model "codex" "gpt-5.3-codex" "codex exec --full-auto -m gpt-5.3-codex -" true
 test_model "codex" "gpt-5.2-codex" "codex exec --full-auto -m gpt-5.2-codex -" true
 test_model "codex" "gpt-5.1-codex-mini" "codex exec --full-auto -m gpt-5.1-codex-mini -" true
 test_model "codex" "gpt-5.1-codex-max" "codex exec --full-auto -m gpt-5.1-codex-max -" true
-test_model "codex" "gpt-5.2" "codex exec --full-auto -m gpt-5.2 -" true
 echo ""
 
 # Claude models (3)

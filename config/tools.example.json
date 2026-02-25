@@ -8,8 +8,8 @@
 		"codex": {
 			"enabled": true,
 			"scope": ["review", "consult"],
-			"command": "codex exec --full-auto -m gpt-5.2-codex -",
-			"model": "gpt-5.2-codex",
+			"command": "codex exec --full-auto -m gpt-5.3-codex -c model_reasoning_effort=\"xhigh\" -",
+			"model": "gpt-5.3-codex",
 			"description": "OpenAI Codex CLI"
 		},
 		"claude-opus": {

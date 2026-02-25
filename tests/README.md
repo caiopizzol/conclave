@@ -57,7 +57,7 @@ bun run test:live
 
 **Environment variables:**
 
-- `MODEL_CODEX` - Override codex model (default: `gpt-5.2-codex`)
+- `MODEL_CODEX` - Override codex model (default: `gpt-5.3-codex`)
 - `MODEL_CLAUDE` - Override claude model (default: `sonnet`)
 
 **Exit codes:**
@@ -83,7 +83,7 @@ bun run test:models
 
 | Tool    | Models                                                                                 |
 | ------- | -------------------------------------------------------------------------------------- |
-| Codex   | `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`, `gpt-5.2`                  |
+| Codex   | `gpt-5.3-codex`, `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`            |
 | Claude  | `opus`, `sonnet`, `haiku`                                                              |
 | Gemini  | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview` |
 | Qwen    | `coder-model`, `vision-model`                                                          |
