@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash, Read, Write, Glob, Grep, Task, TaskOutput, AskUserQuestion
+allowed-tools: Bash, Read, Write, Glob, Grep, Task, AskUserQuestion
 description: Multi-model code review. Spawns parallel reviews from configured AI tools (Codex, Claude, Gemini, Qwen, Mistral, Ollama, Grok) and synthesizes results interactively.
 ---
 
@@ -148,26 +148,37 @@ PROMPT_EOF
 
 #### 4b: Build Shell Scripts
 
-For each eligible tool (filtered in Step 2), write a shell script using the Write tool.
+For each eligible tool (filtered in Step 2), write a shell script. Use the **Bash tool** (not the Write tool) to create temp files — the Write tool requires reading a file first.
 
-The `command` field in the config is **complete** — it includes env vars, model flags, everything. Just plug it in.
+Write all scripts in a **single Bash call**. The `command` field in the config is **complete** — it includes env vars, model flags, everything. Just plug it in.
 
-**For stdin-based tools** (command does NOT contain `-p`), write `/tmp/conclave-run-{tool_name}.sh`:
+**For stdin-based tools** (command does NOT contain `-p`):
 ```bash
+cat > /tmp/conclave-run-{tool_name}.sh << 'EOF'
 #!/bin/bash -l
-cat /tmp/conclave-prompt.md | {command from config} 2>&1
+cat /tmp/conclave-prompt.md | {command from config} 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+EOF
+chmod +x /tmp/conclave-run-{tool_name}.sh
 ```
 
-**For flag-based tools** (command contains `-p`), write `/tmp/conclave-run-{tool_name}.sh`:
+**For flag-based tools** (command contains `-p`):
 ```bash
+cat > /tmp/conclave-run-{tool_name}.sh << 'EOF'
 #!/bin/bash -l
-{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1
+{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+EOF
+chmod +x /tmp/conclave-run-{tool_name}.sh
 ```
 
-**Example**: For a tool with `"command": "ollama run minimax-m2.5:cloud"`, write:
+The `sed` commands strip ANSI escape codes (spinners, cursor movement, colors) from CLI tool output.
+
+**Example**: For a tool with `"command": "ollama run minimax-m2.5:cloud"`:
 ```bash
+cat > /tmp/conclave-run-ollama-minimax.sh << 'EOF'
 #!/bin/bash -l
-cat /tmp/conclave-prompt.md | ollama run minimax-m2.5:cloud 2>&1
+cat /tmp/conclave-prompt.md | ollama run minimax-m2.5:cloud 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+EOF
+chmod +x /tmp/conclave-run-ollama-minimax.sh
 ```
 
 #### 4c: Delegate Execution
@@ -188,7 +199,7 @@ Task tool call:
     ...
 ```
 
-The executor runs each script via `bash -l` in background and returns structured JSON results.
+The executor runs each script as parallel foreground Bash calls and returns structured JSON results.
 
 After the executor returns, parse the JSON `results` object to extract each tool's output. Output: `[STATE: TOOLS_COMPLETE]`
 

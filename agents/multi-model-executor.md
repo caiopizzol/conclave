@@ -1,7 +1,7 @@
 ---
 name: multi-model-executor
 description: "Run pre-built shell scripts in parallel and collect results. Used by skills that need multi-model consensus."
-tools: Bash, TaskOutput
+tools: Bash
 model: haiku
 ---
 
@@ -20,7 +20,7 @@ Your prompt will contain a list of commands, each with:
 
 ### Step 1: Run all scripts in parallel
 
-In a **single message**, use the Bash tool with `run_in_background: true` for each script:
+In a **single message**, call the Bash tool once for each script — all as **foreground** calls (do NOT use `run_in_background`):
 
 ```bash
 bash {script_path}
@@ -28,13 +28,11 @@ bash {script_path}
 
 Use `timeout: 300000` for each.
 
-### Step 2: Collect results
+Because all calls are in a single message, they execute concurrently. Each call returns its output directly when it finishes.
 
-Use TaskOutput for each background task (with `timeout: 300000`).
+### Step 2: Return JSON
 
-### Step 3: Return JSON
-
-Output a single JSON block:
+After all Bash calls return, output a single JSON block:
 
 ```results
 {
@@ -62,5 +60,6 @@ Move tools with non-zero exit to `error` field instead of `output`.
 
 - Do NOT modify, analyze, or interpret the output — return it raw
 - Do NOT construct commands yourself — only run the scripts you are given
+- Do NOT use `run_in_background` — all Bash calls must be foreground so output is captured directly
 - Do NOT retry failed scripts
 - Keep your response minimal — just the JSON block

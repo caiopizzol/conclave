@@ -1,7 +1,7 @@
 ---
 description: "Get a second opinion from multiple AI models when stuck on a problem. Use when going in circles, facing a tricky decision, or wanting alternative approaches."
 argument-hint: "[problem description]"
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, TaskOutput, AskUserQuestion, mcp__browser-tools__*
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, mcp__browser-tools__*
 ---
 
 # Multi-Model Consultation
@@ -123,20 +123,26 @@ PROMPT_EOF
 
 #### 5b: Build Shell Scripts
 
-For each eligible tool (filtered in Step 2), write a shell script using the Write tool.
+For each eligible tool (filtered in Step 2), write a shell script. Use the **Bash tool** (not the Write tool) to create temp files — the Write tool requires reading a file first.
 
-The `command` field in the config is **complete** — it includes env vars, model flags, everything. Just plug it in.
+Write all scripts in a **single Bash call**. The `command` field in the config is **complete** — it includes env vars, model flags, everything. Just plug it in.
 
-**For stdin-based tools** (command does NOT contain `-p`), write `/tmp/conclave-run-{tool_name}.sh`:
+**For stdin-based tools** (command does NOT contain `-p`):
 ```bash
+cat > /tmp/conclave-run-{tool_name}.sh << 'EOF'
 #!/bin/bash -l
-cat /tmp/conclave-prompt.md | {command from config} 2>&1
+cat /tmp/conclave-prompt.md | {command from config} 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+EOF
+chmod +x /tmp/conclave-run-{tool_name}.sh
 ```
 
-**For flag-based tools** (command contains `-p`), write `/tmp/conclave-run-{tool_name}.sh`:
+**For flag-based tools** (command contains `-p`):
 ```bash
+cat > /tmp/conclave-run-{tool_name}.sh << 'EOF'
 #!/bin/bash -l
-{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1
+{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+EOF
+chmod +x /tmp/conclave-run-{tool_name}.sh
 ```
 
 #### 5c: Delegate Execution
@@ -157,7 +163,7 @@ Task tool call:
     ...
 ```
 
-The executor runs each script via `bash -l` in background and returns structured JSON results.
+The executor runs each script as parallel foreground Bash calls and returns structured JSON results.
 
 After the executor returns, parse the JSON `results` object to extract each tool's output.
 
