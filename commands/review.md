@@ -152,20 +152,28 @@ For each eligible tool (filtered in Step 2), write a shell script. Use the **Bas
 
 Write all scripts in a **single Bash call**. The `command` field in the config is **complete** — it includes env vars, model flags, everything. Just plug it in.
 
+Each script **must redirect output to a file** at `/tmp/conclave-output-{tool_name}.txt`. This is critical — background task notifications do NOT reliably deliver stdout content, so the output must be persisted to disk by the script itself.
+
+Also **clean up stale output files** before writing scripts to avoid reading leftover results from previous runs.
+
 **For stdin-based tools** (command does NOT contain `-p`):
 ```bash
+rm -f /tmp/conclave-output-{tool_name}.txt
 cat > /tmp/conclave-run-{tool_name}.sh << 'EOF'
 #!/bin/bash -l
-cat /tmp/conclave-prompt.md | {command from config} 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+cat /tmp/conclave-prompt.md | {command from config} 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g' > /tmp/conclave-output-{tool_name}.txt
+echo $? > /tmp/conclave-exit-{tool_name}.txt
 EOF
 chmod +x /tmp/conclave-run-{tool_name}.sh
 ```
 
 **For flag-based tools** (command contains `-p`):
 ```bash
+rm -f /tmp/conclave-output-{tool_name}.txt
 cat > /tmp/conclave-run-{tool_name}.sh << 'EOF'
 #!/bin/bash -l
-{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g' > /tmp/conclave-output-{tool_name}.txt
+echo $? > /tmp/conclave-exit-{tool_name}.txt
 EOF
 chmod +x /tmp/conclave-run-{tool_name}.sh
 ```
@@ -174,34 +182,45 @@ The `sed` commands strip ANSI escape codes (spinners, cursor movement, colors) f
 
 **Example**: For a tool with `"command": "ollama run minimax-m2.5:cloud"`:
 ```bash
+rm -f /tmp/conclave-output-ollama-minimax.txt
 cat > /tmp/conclave-run-ollama-minimax.sh << 'EOF'
 #!/bin/bash -l
-cat /tmp/conclave-prompt.md | ollama run minimax-m2.5:cloud 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+cat /tmp/conclave-prompt.md | ollama run minimax-m2.5:cloud 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g' > /tmp/conclave-output-ollama-minimax.txt
+echo $? > /tmp/conclave-exit-ollama-minimax.txt
 EOF
 chmod +x /tmp/conclave-run-ollama-minimax.sh
 ```
 
-#### 4c: Delegate Execution
+#### 4c: Run Scripts in Background
 
-Spawn the `multi-model-executor` sub-agent to run all scripts in parallel:
+Run each script directly using the Bash tool with `run_in_background: true`. Launch **all scripts in a single message** so they start concurrently:
 
 ```
-Task tool call:
-  subagent_type: multi-model-executor
-  prompt: |
-    Run these commands in parallel and collect results.
-
-    **Timeout**: 300000
-
-    **Commands**:
-    - name: {tool_name}, model: {model}, script: /tmp/conclave-run-{tool_name}.sh
-    - name: {tool_name}, model: {model}, script: /tmp/conclave-run-{tool_name}.sh
-    ...
+For each tool:
+  Bash tool call:
+    command: bash /tmp/conclave-run-{tool_name}.sh
+    run_in_background: true
+    timeout: 300000
 ```
 
-The executor runs each script as parallel foreground Bash calls and returns structured JSON results.
+You will be **notified automatically** as each script completes. Do NOT poll, sleep, or use TaskOutput — just wait for the notifications. The notifications tell you **when** each script finished; the actual output is in the files.
 
-After the executor returns, parse the JSON `results` object to extract each tool's output. Output: `[STATE: TOOLS_COMPLETE]`
+#### 4d: Collect Results
+
+After **all** background notifications have arrived (one per script), read each output file using the Read tool:
+
+- `/tmp/conclave-output-{tool_name}.txt` — the model's review output
+- `/tmp/conclave-exit-{tool_name}.txt` — the command's exit code (0 = success)
+
+Read all output files in parallel (all Read calls in a single message).
+
+For each tool, record:
+- **name**: tool identifier
+- **model**: model name
+- **success**: true if exit code file contains `0`, false otherwise
+- **output**: contents of the output file
+
+Output: `[STATE: TOOLS_COMPLETE]`
 
 **IMPORTANT**: Proceed IMMEDIATELY to the persistence checkpoint. Do NOT synthesize or present results yet.
 

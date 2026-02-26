@@ -1,7 +1,7 @@
 ---
 description: "Get a second opinion from multiple AI models when stuck on a problem. Use when going in circles, facing a tricky decision, or wanting alternative approaches."
 argument-hint: "[problem description]"
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, AskUserQuestion, mcp__browser-tools__*
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion, mcp__browser-tools__*
 ---
 
 # Multi-Model Consultation
@@ -127,45 +127,64 @@ For each eligible tool (filtered in Step 2), write a shell script. Use the **Bas
 
 Write all scripts in a **single Bash call**. The `command` field in the config is **complete** — it includes env vars, model flags, everything. Just plug it in.
 
+Each script **must redirect output to a file** at `/tmp/conclave-output-{tool_name}.txt`. This is critical — background task notifications do NOT reliably deliver stdout content, so the output must be persisted to disk by the script itself.
+
+Also **clean up stale output files** before writing scripts to avoid reading leftover results from previous runs.
+
 **For stdin-based tools** (command does NOT contain `-p`):
 ```bash
+rm -f /tmp/conclave-output-{tool_name}.txt
 cat > /tmp/conclave-run-{tool_name}.sh << 'EOF'
 #!/bin/bash -l
-cat /tmp/conclave-prompt.md | {command from config} 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+cat /tmp/conclave-prompt.md | {command from config} 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g' > /tmp/conclave-output-{tool_name}.txt
+echo $? > /tmp/conclave-exit-{tool_name}.txt
 EOF
 chmod +x /tmp/conclave-run-{tool_name}.sh
 ```
 
 **For flag-based tools** (command contains `-p`):
 ```bash
+rm -f /tmp/conclave-output-{tool_name}.txt
 cat > /tmp/conclave-run-{tool_name}.sh << 'EOF'
 #!/bin/bash -l
-{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g'
+{command from config} "$(cat /tmp/conclave-prompt.md)" 2>&1 | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;?]*[hlGK]//g' > /tmp/conclave-output-{tool_name}.txt
+echo $? > /tmp/conclave-exit-{tool_name}.txt
 EOF
 chmod +x /tmp/conclave-run-{tool_name}.sh
 ```
 
-#### 5c: Delegate Execution
+The `sed` commands strip ANSI escape codes (spinners, cursor movement, colors) from CLI tool output.
 
-Spawn the `multi-model-executor` sub-agent to run all scripts in parallel:
+#### 5c: Run Scripts in Background
+
+Run each script directly using the Bash tool with `run_in_background: true`. Launch **all scripts in a single message** so they start concurrently:
 
 ```
-Task tool call:
-  subagent_type: multi-model-executor
-  prompt: |
-    Run these commands in parallel and collect results.
-
-    **Timeout**: 300000
-
-    **Commands**:
-    - name: {tool_name}, model: {model}, script: /tmp/conclave-run-{tool_name}.sh
-    - name: {tool_name}, model: {model}, script: /tmp/conclave-run-{tool_name}.sh
-    ...
+For each tool:
+  Bash tool call:
+    command: bash /tmp/conclave-run-{tool_name}.sh
+    run_in_background: true
+    timeout: 300000
 ```
 
-The executor runs each script as parallel foreground Bash calls and returns structured JSON results.
+You will be **notified automatically** as each script completes. Do NOT poll, sleep, or use TaskOutput — just wait for the notifications. The notifications tell you **when** each script finished; the actual output is in the files.
 
-After the executor returns, parse the JSON `results` object to extract each tool's output.
+#### 5d: Collect Results
+
+After **all** background notifications have arrived (one per script), read each output file using the Read tool:
+
+- `/tmp/conclave-output-{tool_name}.txt` — the model's response
+- `/tmp/conclave-exit-{tool_name}.txt` — the command's exit code (0 = success)
+
+Read all output files in parallel (all Read calls in a single message).
+
+For each tool, record:
+- **name**: tool identifier
+- **model**: model name
+- **success**: true if exit code file contains `0`, false otherwise
+- **output**: contents of the output file
+
+After all files are read, proceed to synthesis.
 
 ### Step 6: Synthesize Responses
 
