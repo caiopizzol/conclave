@@ -5,7 +5,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-CONFIG_FILE="$PROJECT_ROOT/config/tools.example.json"
+CONFIG_FILE="$PROJECT_ROOT/examples/config/tools.json"
 
 # Tools used by conclave
 TOOLS=(codex claude gemini qwen vibe ollama grok jq)

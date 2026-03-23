@@ -2,38 +2,21 @@
 
 [![GitHub release](https://img.shields.io/github/v/release/caiopizzol/conclave)](https://github.com/caiopizzol/conclave/releases)
 
-Multi-model AI collaboration for [Claude Code](https://claude.com/claude-code). Get consensus-driven code reviews and second opinions from multiple AI models in parallel.
+Consensus before commit.
 
-## Commands
+Every AI model has blind spots. They hallucinate differently, miss different edge cases, get confident about different wrong things. Conclave runs multiple AI CLIs in parallel and surfaces where they agree. When 2 out of 3 models flag the same issue, it's probably real. When only one does, it might be noise.
 
-| Command | Purpose |
-|---------|---------|
-| `/review` | Multi-model code review on your staged changes |
-| `/consult` | Get a second opinion when stuck on a problem |
+One command. Multiple perspectives. Clear signal.
 
-## How It Works
+## What It Is
+
+A shell script that reads your config, runs a prompt through every AI CLI you have installed, and returns structured JSON. That's the core. Everything else — the `/review` command, the `/consult` command, the investigator agents — those are examples you can use, modify, or replace.
 
 ```
-/review                              /consult "why is this broken?"
-   │                                    │
-   ├── Codex ───► reviews diff          ├── Codex ───► reads conversation
-   ├── Gemini ──► reviews diff          ├── Gemini ──► reads conversation
-   ├── Claude ──► reviews diff          ├── Claude ──► reads conversation
-   └── ...                              └── ...
-   │                                    │
-   ▼                                    ▼
-   Consensus: issues flagged            Synthesis: consensus suggestions,
-   by 2+ models highlighted             unique perspectives, disagreements
+your prompt ──► conclave-run.sh ──► Codex ──►┐
+                                   Gemini ──►├──► JSON results
+                                   Claude ──►┘
 ```
-
-**Why multiple models?**
-- Different training data → different blind spots
-- 2+ models flagging the same issue → stronger signal
-- Diverse perspectives surface better solutions
-
-## Inspiration
-
-Inspired by [LLM Council](https://github.com/karpathy/llm-council) — the idea that multiple LLMs reviewing the same problem surfaces stronger signals than any single model.
 
 ## Installation
 
@@ -43,165 +26,151 @@ cd ~/dev/conclave
 bun run register
 ```
 
-To unregister:
+**Requires**: [jq](https://jqlang.org/) (`brew install jq`)
+
+This installs the engine script and example commands. To unregister: `bun run unregister`.
+
+## Quick Start
+
+The engine script works standalone:
 
 ```bash
-bun run unregister
+# Write a prompt
+echo "What are the pros and cons of server components?" > /tmp/prompt.md
+
+# Run it through your configured models
+bash ~/.claude/scripts/conclave-run.sh --scope review --prompt /tmp/prompt.md
 ```
 
-## Configuration
-
-### Tools (`~/.config/conclave/tools.json`)
-
+Returns JSON:
 ```json
 {
-  "persistence": {
-    "enabled": true,
-    "required": false,
-    "data_dir": "~/.local/share/conclave/reviews"
-  },
-  "tools": {
-    "codex": {
-      "enabled": true,
-      "scope": ["review", "consult"],
-      "command": "codex exec --full-auto -m gpt-5.3-codex -c model_reasoning_effort=\"xhigh\" -",
-      "model": "gpt-5.3-codex",
-      "description": "OpenAI Codex CLI"
-    },
-    "claude-opus": {
-      "enabled": true,
-      "scope": ["consult"],
-      "command": "claude --print",
-      "model": "opus",
-      "description": "Claude Code (Opus)"
-    },
-    "gemini": {
-      "enabled": true,
-      "scope": ["review", "consult"],
-      "command": "gemini -o text",
-      "model": "gemini-3-pro-preview",
-      "description": "Google Gemini CLI"
-    }
-  },
-  "prompts": {
-    "review": "~/.config/conclave/prompt.md",
-    "consult": "~/.config/conclave/consult-prompt.md"
+  "tools_run": ["codex", "claude-opus"],
+  "results": {
+    "codex": { "model": "gpt-5.3-codex", "success": true, "output": "..." },
+    "claude-opus": { "model": "opus", "success": true, "output": "..." }
   }
 }
 ```
 
-#### Tool Fields
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `enabled` | Yes | Whether to use this tool |
-| `scope` | No | Array of commands: `["review"]`, `["consult"]`, or `["review", "consult"]`. If omitted, tool is used for all commands |
-| `command` | Yes | CLI command to run |
-| `model` | No | Model to use (injected via `--model` or `-m` flag) |
-| `description` | No | Human-readable description |
-
-You can define multiple entries for the same provider with different models (e.g., `claude-opus` and `claude-sonnet`).
-
-#### Persistence Fields
-
-| Field | Default | Description |
-|-------|---------|-------------|
-| `enabled` | `true` | Save review results to disk for later analysis |
-| `required` | `false` | If `true`, halt on persistence failure instead of continuing |
-| `data_dir` | `~/.local/share/conclave/reviews` | Directory for saved review data |
-
-Review results are saved as JSON files containing raw model outputs, timestamps, and investigation results. This enables:
-- Tracking review history across PRs
-- Analyzing model performance over time
-- Recovering from context compaction
-
-**Supported models:**
-
-| Tool    | Models                                                                                                                         | Documentation                                                  |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| Codex   | `gpt-5.3-codex`, `gpt-5.2-codex`, `gpt-5.1-codex-mini`, `gpt-5.1-codex-max`                                                    | [Codex Models](https://developers.openai.com/codex/models/)    |
-| Claude  | `opus`, `sonnet`, `haiku` (aliases) or full names like `claude-opus-4-5-20251101`                                              | [CLI Reference](https://code.claude.com/docs/en/cli-reference) |
-| Gemini  | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview`                                         | [Gemini CLI](https://geminicli.com/docs/cli/model/)            |
-| Qwen    | `coder-model` (default), `vision-model`                                                                                        | [Qwen Code Docs](https://qwenlm.github.io/qwen-code-docs/)     |
-| Mistral | Config-based (`~/.vibe/config.toml`)                                                                                           | [Mistral Vibe Docs](https://docs.mistral.ai/mistral-vibe/)     |
-| Grok    | `grok-code-fast-1`, `grok-4-1-fast-*`, `grok-4-fast-*`, `grok-3`, `grok-3-mini`                                                 | [xAI API Models](https://docs.x.ai/docs/models)                |
-| Ollama  | Cloud: `minimax-m2.5:cloud`, `glm-5:cloud`, `kimi-k2.5:cloud`, or any model from [library](https://ollama.com/library). Local: `qwen2.5-coder:7b` | [Ollama Library](https://ollama.com/library) |
-
-> **Note:** Ollama models use `ollama run` directly. Cloud models (`:cloud` suffix) require an Ollama account — sign up at [ollama.com](https://ollama.com). Local models (e.g., `qwen2.5-coder:7b`) run on your machine and require ~8GB+ RAM for 7B models.
-
-> **Note:** Mistral and Grok use command-line argument passing (not stdin), which has a ~200KB limit on macOS. Very large diffs may cause these tools to fail while other tools succeed.
-
-> **Note:** Grok uses the community CLI ([`@vibe-kit/grok-cli`](https://github.com/superagent-ai/grok-cli)) until xAI releases the official "Grok Build" CLI.
-
-### Prompts
-
-Customize prompts for each command:
-
-| File | Template Variables |
-|------|-------------------|
-| `~/.config/conclave/prompt.md` | `{{branch}}`, `{{target_branch}}`, `{{diff}}` |
-| `~/.config/conclave/consult-prompt.md` | `{{history_file}}`, `{{question}}`, `{{cwd}}` |
-
-### Authentication
-
-| Tool    | Install                                                                       |
-| ------- | ----------------------------------------------------------------------------- |
-| Codex   | `npm install -g @openai/codex`                                                |
-| Claude  | Built-in                                                                      |
-| Gemini  | `npm install -g @google/gemini-cli`                                           |
-| Qwen    | `npm install -g @qwen-code/qwen-code`                                         |
-| Mistral | `pipx install mistral-vibe`                                                   |
-| Grok    | `bun add -g @vibe-kit/grok-cli`; `export GROK_API_KEY="key"` in `~/.zshrc`    |
-| Ollama  | [ollama.com/download](https://ollama.com/download); cloud: `ollama login`; local: `ollama pull <model>` |
-
-## Usage
-
-### Code Review
+Or use the example slash commands inside Claude Code:
 
 ```bash
-# Review staged changes
-git add -p
-/review
+git add -p && /review                          # multi-model code review
+/consult "why is the table rendering broken?"  # second opinion from multiple models
 ```
 
-### Second Opinion
+## Configuration
 
-```bash
-# When stuck on a problem
-/consult "why is the table rendering broken after paste?"
+Edit `~/.config/conclave/tools.json`:
 
-# When going in circles
-/consult "I've tried X, Y, Z but none work"
-
-# Validate an approach
-/consult "is this the right way to handle state here?"
+```json
+{
+  "tools": {
+    "codex": {
+      "enabled": true,
+      "command": "codex exec --full-auto -m gpt-5.3-codex -",
+      "model": "gpt-5.3-codex"
+    },
+    "claude-opus": {
+      "enabled": true,
+      "command": "CLAUDECODE=0 claude --print --model opus",
+      "model": "opus"
+    },
+    "gemini": {
+      "enabled": false,
+      "command": "gemini -o text"
+    }
+  }
+}
 ```
 
-`/consult` passes your Claude Code conversation history to external models, so they can see what's already been tried and avoid suggesting the same things.
+Add any CLI tool that accepts a prompt via stdin. For tools that take the prompt as an argument instead, set `"input": "argument"`.
 
-## Philosophy
+### Tool Fields
 
-More models ≠ better. The value is **consensus**:
+| Field | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `enabled` | Yes | — | Whether to use this tool |
+| `command` | Yes | — | CLI command to run |
+| `scope` | No | all | Array of scopes: `["review"]`, `["consult"]`, or both. Omit to use for everything |
+| `input` | No | `"stdin"` | `"stdin"` (piped) or `"argument"` (appended to command) |
+| `model` | No | — | Model name (for display) |
 
-- 1 model flags issue → might be noise
-- 2+ models flag same issue → likely real
-- Different perspectives → surface blind spots
+### Supported Tools
 
-Conclave surfaces what matters.
+| Tool | Install |
+|------|---------|
+| Codex | `npm install -g @openai/codex` |
+| Claude | Built-in |
+| Gemini | `npm install -g @google/gemini-cli` |
+| Qwen | `npm install -g @qwen-code/qwen-code` |
+| Mistral | `pipx install mistral-vibe` |
+| Grok | `bun add -g @vibe-kit/grok-cli` |
+| Ollama | [ollama.com/download](https://ollama.com/download) |
 
-## Workflow
+Any CLI that reads from stdin works. Configure it and it joins the council.
 
-`/review` follows a state machine pattern with checkpoints to ensure reliability:
+## Create Your Own Command
+
+Create `~/.claude/commands/my-command.md`:
+
+```markdown
+---
+description: "My custom multi-model command"
+allowed-tools: Bash, Read
+---
+
+# My Command
+
+\```bash
+cat > /tmp/prompt.md << 'EOF'
+Your prompt here. $ARGUMENTS
+EOF
+\```
+
+\```bash
+bash ~/.claude/scripts/conclave-run.sh --scope my-command --prompt /tmp/prompt.md
+\```
+
+Parse the JSON and present results.
+```
+
+Add your scope to the config, or omit `scope` to use all tools:
+
+```json
+{ "codex": { "enabled": true, "scope": ["review", "consult", "my-command"] } }
+```
+
+Then: `/my-command "refactor the auth module"`
+
+## Architecture
 
 ```
-[INIT] → [GATHERING] → [SPAWNING] → [TOOLS_COMPLETE]
-                                          │
-                                    ⛔ CHECKPOINT
-                                          │
-                                    [PERSISTED] → [SYNTHESIZING] → [INVESTIGATING] → [COMPLETE]
+conclave/
+├── scripts/
+│   ├── conclave-run.sh       # Core engine
+│   ├── register.sh
+│   └── unregister.sh
+└── examples/
+    ├── commands/              # /review, /consult
+    ├── agents/                # Optional investigator agents
+    └── config/                # tools.json, prompt templates
 ```
 
-The ⛔ checkpoint ensures review data is persisted before synthesis. If `persistence.required` is `true`, the workflow halts on persistence failure.
+The engine reads config, runs tools in parallel, returns JSON. Everything in `examples/` is a starting point — fork it, change it, replace it.
+
+## Why
+
+More models ≠ better. Consensus = signal.
+
+- 1 model flags an issue → might be noise
+- 2+ models flag the same issue → likely real
+- Only one model sees it → you know to be skeptical
+
+Conclave doesn't generate code. It doesn't replace your judgment. It surfaces what matters and dims what doesn't.
+
+Inspired by [LLM Council](https://github.com/karpathy/llm-council).
 
 ## License
 

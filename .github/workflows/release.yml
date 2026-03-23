@@ -5,8 +5,8 @@ on:
   push:
     branches: [main]
     paths:
-      - commands/**
-      - config/**
+      - examples/**
+      - scripts/**
       - tests/**
       - package.json
       - .releaserc.json
@@ -40,3 +40,4 @@ jobs:
       - run: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
