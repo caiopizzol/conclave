@@ -2,7 +2,7 @@
 	"tools": {
 		"codex": {
 			"enabled": true,
-			"command": "codex exec --full-auto -m gpt-5.3-codex -c model_reasoning_effort=\"xhigh\" -",
+			"command": "codex exec --full-auto -m gpt-5.3-codex -c model_reasoning_effort=\"xhigh\"",
 			"model": "gpt-5.3-codex",
 			"description": "OpenAI Codex CLI"
 		},
@@ -10,7 +10,8 @@
 			"enabled": true,
 			"command": "CLAUDECODE=0 claude --print --model opus",
 			"model": "opus",
-			"description": "Claude Code (Opus)"
+			"description": "Claude Code (Opus). Add per-role MCP/tools via extraArgs, e.g. [\"--mcp-config\", \"/abs/path/mcp.json\", \"--allowedTools\", \"mcp__foo__*\"]. Use absolute paths (single-quoting in runTool suppresses ~ and $HOME expansion).",
+			"extraArgs": []
 		},
 		"gemini": {
 			"enabled": false,

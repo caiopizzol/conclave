@@ -11,6 +11,7 @@
 		"lint": "biome lint .",
 		"prepare": "lefthook install",
 		"release": "semantic-release",
+		"test:converge": "bash tests/converge-extraargs.sh",
 		"test:tools": "bash tests/verify-tools.sh",
 		"test:live": "bash tests/cli-live.sh",
 		"test:models": "bash tests/cli-models.sh"

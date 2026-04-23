@@ -11,12 +11,18 @@ Configuration, custom commands, and the engine's JSON contract. For the mental m
   "tools": {
     "codex": {
       "enabled": true,
-      "command": "codex exec --full-auto -m gpt-5.3-codex -",
+      "command": "codex exec --full-auto -m gpt-5.3-codex",
       "model": "gpt-5.3-codex"
     },
     "claude-opus": {
       "enabled": true,
       "command": "CLAUDECODE=0 claude --print --model opus",
+      "extraArgs": [
+        "--mcp-config",
+        "/Users/you/.config/conclave/mcp-implementer.json",
+        "--allowedTools",
+        "mcp__browser__*,mcp__github__*"
+      ],
       "model": "opus"
     },
     "gemini": {
@@ -38,6 +44,8 @@ Any CLI that reads a prompt on stdin works. For tools that want the prompt as an
 | `scope` | No | all | Array of scopes: `["review"]`, `["consult"]`, or both. Omit to use for everything |
 | `input` | No | `"stdin"` | `"stdin"` (piped) or `"argument"` (appended to command) |
 | `model` | No | - | Model name (for display) |
+| `description` | No | - | Human-friendly label used in example configs |
+| `extraArgs` | No | `[]` | Extra CLI args appended before the prompt. Each element is shell-quoted individually, so use absolute paths instead of `~` or `$HOME` |
 
 ### Supported CLIs
 

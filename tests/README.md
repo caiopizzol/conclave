@@ -94,6 +94,24 @@ bun run test:models
 - 0: All documented models validated
 - 1: At least one model failed (README may need updating)
 
+### `converge-extraargs.sh`
+
+Coordinator integration test for `/converge` that uses fake implementer/reviewer CLIs and verifies `extraArgs` wiring end-to-end without making API calls.
+
+**Run:**
+
+```bash
+bun run test:converge
+```
+
+**What it checks:**
+
+- The coordinator reads `extraArgs` from `tools.json`
+- Each extra arg arrives as a distinct argv entry, including spaces, quotes, and glob characters
+- `argument` tools still receive the prompt as the final positional arg
+- `stdin` tools still receive the prompt on stdin
+- A trivial `/converge` session completes successfully with the configured tool wrappers
+
 ## Future Phases
 
-- Integration tests for full review workflow
+- Broader integration coverage for live multi-round review flows

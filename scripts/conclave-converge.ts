@@ -64,6 +64,8 @@ interface ToolConfig {
 	command: string;
 	input?: "stdin" | "argument";
 	model?: string;
+	description?: string;
+	extraArgs?: string[];
 }
 
 interface ToolsFile {
@@ -125,18 +127,23 @@ function stripAnsi(s: string): string {
 	return s.replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, "").replace(/\x1b\[[0-9;?]*[hlGK]/g, "");
 }
 
+function shellQuote(s: string): string {
+	return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+
 async function runTool(
 	tool: ToolConfig,
 	prompt: string,
 	timeoutSec = 600,
 ): Promise<{ ok: true; output: string } | { ok: false; error: string }> {
 	const input = tool.input ?? "stdin";
+	const extra = (tool.extraArgs ?? []).map(shellQuote).join(" ");
 	let cmdLine: string;
 	if (input === "argument") {
 		const escaped = prompt.replace(/'/g, `'\\''`);
-		cmdLine = `${tool.command} '${escaped}'`;
+		cmdLine = extra ? `${tool.command} ${extra} '${escaped}'` : `${tool.command} '${escaped}'`;
 	} else {
-		cmdLine = tool.command;
+		cmdLine = extra ? `${tool.command} ${extra}` : tool.command;
 	}
 
 	const proc = Bun.spawn({
