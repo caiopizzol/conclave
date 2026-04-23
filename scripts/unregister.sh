@@ -4,9 +4,12 @@ set -e
 # Remove commands
 rm -f ~/.claude/commands/review.md
 rm -f ~/.claude/commands/consult.md
+rm -f ~/.claude/commands/converge.md
 
-# Remove engine
+# Remove engine + coordinator
 rm -f ~/.claude/scripts/conclave-run.sh
+rm -f ~/.claude/scripts/conclave-converge.sh
+rm -f ~/.claude/scripts/conclave-converge.ts
 
 # Remove agents (if installed)
 rm -f ~/.claude/agents/correctness-investigator.md
