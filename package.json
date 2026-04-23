@@ -1,6 +1,6 @@
 {
 	"name": "conclave",
-	"version": "0.13.0",
+	"version": "0.14.0",
 	"description": "Multi-model consensus engine for Claude Code",
 	"scripts": {
 		"register": "bash scripts/register.sh",
