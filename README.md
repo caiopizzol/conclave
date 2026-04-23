@@ -4,21 +4,34 @@
 
 Consensus before commit.
 
-Every AI model has blind spots. They hallucinate differently, miss different edge cases, get confident about different wrong things. Conclave runs multiple AI CLIs in parallel and surfaces where they agree. When 2 out of 3 models flag the same issue, it's probably real. When only one does, it might be noise.
+Conclave is a local multi-model CLI for developer decisions. It runs your coding tasks through more than one model, using the CLIs you already have.
 
-One command. Multiple perspectives. Clear signal.
+Compare when you want perspectives. Converge when you want them to argue.
 
-## What It Is
+## Modes
 
-A shell script that reads your config, runs a prompt through every AI CLI you have installed, and returns structured JSON. That's the core. Everything else — the `/review` command, the `/consult` command, the investigator agents — those are examples you can use, modify, or replace.
+| Mode | What it does | When to use it |
+|------|--------------|----------------|
+| `/review` | parallel critique on a diff | before commit or PR |
+| `/consult` | parallel second opinions on a question | when stuck |
+| `/converge` | one model drafts, another challenges, a coordinator tracks issues until they resolve or hit a cap | when the plan matters |
 
-```
-your prompt ──► conclave-run.sh ──► Codex ──►┐
-                                   Gemini ──►├──► JSON results
-                                   Claude ──►┘
-```
+`/review` and `/consult` **compare** - same prompt, multiple models, consensus highlighted.
 
-## Installation
+`/converge` **deliberates** - two roles (implementer and reviewer), one ledger, bounded rounds.
+
+## What it's not
+
+- Not agent soup
+- Not a hosted orchestration product
+- Not an always-on framework
+- Not "ask 5 models and pray"
+
+Two roles, one ledger, bounded rounds.
+
+There is no Conclave-hosted service and no Conclave proxy. Conclave invokes the CLIs already on your machine - Claude, Codex, Gemini, whatever you have - and runs locally. The underlying CLIs still call their providers' APIs; that's up to you to configure.
+
+## Quick start
 
 ```bash
 git clone https://github.com/caiopizzol/conclave ~/dev/conclave
@@ -26,149 +39,55 @@ cd ~/dev/conclave
 bun run register
 ```
 
-**Requires**: [jq](https://jqlang.org/) (`brew install jq`)
+**Requires:** [bun](https://bun.sh/), [jq](https://jqlang.org/), and at least one AI CLI on your `PATH` (Claude, Codex, Gemini, ...).
 
-This installs the engine script and example commands. To unregister: `bun run unregister`.
+`/review` and `/consult` work with any one or more configured CLIs. `/converge` needs the default config's `claude-opus` and `codex` keys both enabled, because the implementer and reviewer roles are hardcoded to those keys in the MVP. Swap support is planned.
 
-## Quick Start
+## First successful run
 
-The engine script works standalone:
-
-```bash
-# Write a prompt
-echo "What are the pros and cons of server components?" > /tmp/prompt.md
-
-# Run it through your configured models
-bash ~/.claude/scripts/conclave-run.sh --scope review --prompt /tmp/prompt.md
-```
-
-Returns JSON:
-```json
-{
-  "tools_run": ["codex", "claude-opus"],
-  "results": {
-    "codex": { "model": "gpt-5.3-codex", "success": true, "output": "..." },
-    "claude-opus": { "model": "opus", "success": true, "output": "..." }
-  }
-}
-```
-
-Or use the example slash commands inside Claude Code:
-
-```bash
-git add -p && /review                          # multi-model code review
-/consult "why is the table rendering broken?"  # second opinion from multiple models
-```
-
-## Configuration
-
-Edit `~/.config/conclave/tools.json`:
-
-```json
-{
-  "tools": {
-    "codex": {
-      "enabled": true,
-      "command": "codex exec --full-auto -m gpt-5.3-codex -",
-      "model": "gpt-5.3-codex"
-    },
-    "claude-opus": {
-      "enabled": true,
-      "command": "CLAUDECODE=0 claude --print --model opus",
-      "model": "opus"
-    },
-    "gemini": {
-      "enabled": false,
-      "command": "gemini -o text"
-    }
-  }
-}
-```
-
-Add any CLI tool that accepts a prompt via stdin. For tools that take the prompt as an argument instead, set `"input": "argument"`.
-
-### Tool Fields
-
-| Field | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `enabled` | Yes | — | Whether to use this tool |
-| `command` | Yes | — | CLI command to run |
-| `scope` | No | all | Array of scopes: `["review"]`, `["consult"]`, or both. Omit to use for everything |
-| `input` | No | `"stdin"` | `"stdin"` (piped) or `"argument"` (appended to command) |
-| `model` | No | — | Model name (for display) |
-
-### Supported Tools
-
-| Tool | Install |
-|------|---------|
-| Codex | `npm install -g @openai/codex` |
-| Claude | Built-in |
-| Gemini | `npm install -g @google/gemini-cli` |
-| Qwen | `npm install -g @qwen-code/qwen-code` |
-| Mistral | `pipx install mistral-vibe` |
-| Grok | `bun add -g @vibe-kit/grok-cli` |
-| Ollama | [ollama.com/download](https://ollama.com/download) |
-
-Any CLI that reads from stdin works. Configure it and it joins the council.
-
-## Create Your Own Command
-
-Create `~/.claude/commands/my-command.md`:
-
-```markdown
----
-description: "My custom multi-model command"
-allowed-tools: Bash, Read
----
-
-# My Command
-
-\```bash
-cat > /tmp/prompt.md << 'EOF'
-Your prompt here. $ARGUMENTS
-EOF
-\```
-
-\```bash
-bash ~/.claude/scripts/conclave-run.sh --scope my-command --prompt /tmp/prompt.md
-\```
-
-Parse the JSON and present results.
-```
-
-Add your scope to the config, or omit `scope` to use all tools:
-
-```json
-{ "codex": { "enabled": true, "scope": ["review", "consult", "my-command"] } }
-```
-
-Then: `/my-command "refactor the auth module"`
-
-## Architecture
+Stage a small diff, then from Claude Code:
 
 ```
-conclave/
-├── scripts/
-│   ├── conclave-run.sh       # Core engine
-│   ├── register.sh
-│   └── unregister.sh
-└── examples/
-    ├── commands/              # /review, /consult
-    ├── agents/                # Optional investigator agents
-    └── config/                # tools.json, prompt templates
+/review
 ```
 
-The engine reads config, runs tools in parallel, returns JSON. Everything in `examples/` is a starting point — fork it, change it, replace it.
+Each configured model critiques the diff in parallel. Consensus items (flagged by two or more models) are marked separately. Single-model findings are more likely noise.
+
+For a question instead of a diff:
+
+```
+/consult "why is the table rendering broken?"
+```
+
+When the plan itself matters, not just the diff:
+
+```
+/converge "design a rate limiter for the auth endpoint"
+```
+
+`/converge` takes longer than the other two because it runs a review/revise loop. Expect 2-5 minutes. The session writes every prompt, artifact, and ledger snapshot to a temp directory so you can audit what the models actually said.
+
+## When to use what
+
+- Fast signal before a commit: `/review`
+- Quick second opinion on an approach: `/consult`
+- A plan you want models to challenge and refine: `/converge`
+
+## Advanced
+
+The engine is a shell script that reads a config, runs tools in parallel, and returns JSON. Custom commands, custom scopes, and the engine's JSON contract are covered in [docs/advanced.md](docs/advanced.md).
+
+The `/converge` coordinator has its own design document: [docs/converge.md](docs/converge.md).
 
 ## Why
 
-More models ≠ better. Consensus = signal.
+More models does not mean better. Consensus is the signal.
 
-- 1 model flags an issue → might be noise
-- 2+ models flag the same issue → likely real
-- Only one model sees it → you know to be skeptical
+- One model flags an issue → might be noise.
+- Two or more models flag the same issue → probably real.
+- One model drafts and another challenges until they agree → a plan you can actually trust.
 
-Conclave doesn't generate code. It doesn't replace your judgment. It surfaces what matters and dims what doesn't.
+Conclave does not replace your judgment. It structures the output of multiple models so disagreement becomes useful instead of overwhelming.
 
 Inspired by [LLM Council](https://github.com/karpathy/llm-council).
 
