@@ -1,7 +1,7 @@
 {
 	"name": "conclave",
 	"version": "1.0.0",
-	"description": "Persistent multi-model advisor handoff for Claude Code",
+	"description": "A local console for coding-agent handoffs. Persistent advisor sessions per worktree, native vendor resume.",
 	"scripts": {
 		"register": "bash scripts/register.sh",
 		"unregister": "bash scripts/unregister.sh",
@@ -17,7 +17,9 @@
 		"multi-model",
 		"claude-code",
 		"codex",
-		"advisor"
+		"advisor",
+		"agent-handoff",
+		"harness"
 	],
 	"author": "",
 	"license": "MIT",

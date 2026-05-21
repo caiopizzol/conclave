@@ -6,28 +6,31 @@ Architecture and adapter contract for conclave. For setup and usage, see the [RE
 
 ```
 conclave/
+├── src/
+│   ├── core/                        # the harness (shared, recipe-agnostic)
+│   │   ├── types.ts                 # Advisor interface, state shapes
+│   │   ├── state.ts                 # XDG state, atomic writes, run audit
+│   │   ├── mcp-client.ts            # Stdio MCP client (reserved for future MCP-backed adapters)
+│   │   └── adapters/
+│   │       ├── codex-exec.ts        # Codex via `codex exec resume`
+│   │       └── claude-cli.ts        # Claude via `claude --print --resume`
+│   └── recipes/
+│       └── consult.ts               # /consult recipe entry, imports from ../core/
 ├── skills/
 │   └── consult/
-│       ├── SKILL.md                 # Claude Code skill UX layer
-│       └── scripts/
-│           ├── conclave-advise.ts   # CLI entry, called by SKILL.md
-│           └── conclave-core/
-│               ├── types.ts         # Advisor interface, state shapes
-│               ├── state.ts         # XDG state, atomic writes, run audit
-│               ├── mcp-client.ts    # Stdio MCP client (reserved for future MCP-backed adapters)
-│               └── adapters/
-│                   ├── codex-exec.ts  # Codex via `codex exec resume`
-│                   └── claude-cli.ts  # Claude via `claude --print --resume`
+│       └── SKILL.md                 # Claude Code skill UX surface
 ├── scripts/
-│   ├── register.sh                  # Copies skills/consult/ into ~/.claude/skills/
+│   ├── register.sh                  # Bundles src/recipes/consult.ts and installs the skill
 │   └── unregister.sh
 └── docs/
     └── advanced.md                  # This file
 ```
 
-The skill is self-contained: `SKILL.md` invokes its bundled helper via `${CLAUDE_SKILL_DIR}/scripts/conclave-advise.ts`. `register.sh` copies the whole `skills/consult/` directory into `~/.claude/skills/consult/`. There is no path substitution and no symlink back to the repo, so the installed skill does not break if the repo moves. Re-run `bun run register` after pulling new conclave changes.
+**Conclave is the console.** `src/core/` is the reusable harness: provider adapters, state store, run audit, MCP client (held for adapters that need it). It is recipe-agnostic.
 
-All orchestration is in `conclave-advise.ts`: parse args, load/save state, invoke advisors, write run audit, format markdown for the executor.
+**`/consult` is the first recipe.** `src/recipes/consult.ts` is its CLI entry. It imports from `../core/` and ships its own SKILL.md under `skills/consult/`. Future recipes (review, investigation, planning) would live alongside as siblings under `src/recipes/`, each with their own SKILL.md.
+
+**The installed skill is self-contained.** `register.sh` uses Bun's bundler to inline all of `src/core/` into the recipe entry and write a single file at `~/.claude/skills/consult/scripts/consult.js`. The installed skill needs no other files and does not depend on the repo's path on disk. Re-run `bun run register` after pulling new conclave changes to refresh the bundle.
 
 ## Why provider-native resume
 
@@ -42,9 +45,9 @@ This means conclave does not maintain its own conversation transcripts for advis
 
 OpenAI documents `codex mcp-server` as an MCP-server entry point with `codex` and `codex-reply` tools. Initial design used it. Discovered mid-implementation: the `threadId` returned by `codex mcp-server` is process-bound. Each fresh server process has its own in-memory thread registry. A `threadId` minted in process A returns `Session not found` in process B, even though the rollout exists on disk.
 
-Per-invocation helpers cannot use `codex mcp-server` for persistent advisors without a long-lived daemon. `codex exec resume` reads from disk and works across processes, which is what /consult needs.
+Per-invocation helpers cannot use `codex mcp-server` for persistent advisors without a long-lived daemon. `codex exec resume` reads from disk and works across processes, which is what `/consult` needs.
 
-`mcp-client.ts` is retained in the core for future adapters that need MCP-based transports (e.g., consuming third-party MCP servers from inside an advisor adapter).
+`mcp-client.ts` is retained in `src/core/` for future adapters that need MCP-based transports (e.g., consuming third-party MCP servers from inside an advisor adapter).
 
 ## State
 
@@ -119,18 +122,26 @@ The adapter is responsible for:
 
 ## Adding an advisor
 
-1. Add a `ProviderId` to `types.ts`.
-2. Implement the adapter under `skills/consult/scripts/conclave-core/adapters/<provider>.ts`.
-3. Add a branch in `conclave-advise.ts`'s `defaultAdvisorConfig()` and `makeAdvisor()`.
+1. Add a `ProviderId` to `src/core/types.ts`.
+2. Implement the adapter under `src/core/adapters/<provider>.ts`.
+3. Add a branch in the recipe that uses it (e.g., `src/recipes/consult.ts`'s `defaultAdvisorConfig()` and `makeAdvisor()`).
 
 The interface is intentionally minimal. Resist generalizing it until you have a third concrete adapter that needs something the current shape can't express.
 
+## Adding a recipe
+
+1. Create `src/recipes/<recipe>.ts`. Import from `../core/` for adapters, state, audit.
+2. Create `skills/<recipe>/SKILL.md` describing the UX.
+3. Add a bundle step to `scripts/register.sh` that emits `~/.claude/skills/<recipe>/scripts/<recipe>.js`.
+
+Each recipe defines its own input shape, advisor selection, persistence mode, and the verification instructions the executor should follow. The harness handles transport, persistence, and audit uniformly.
+
 ## CLI helper
 
-`conclave-advise.ts` is the entry point the skill shells out to:
+The `/consult` recipe entry is bundled into a single file at install time:
 
 ```
-bun "${CLAUDE_SKILL_DIR}/scripts/conclave-advise.ts" \
+bun "${CLAUDE_SKILL_DIR}/scripts/consult.js" \
   --session-id "$CLAUDE_SESSION_ID" \
   --advisors codex,claude \
   --question "..."
@@ -138,4 +149,4 @@ bun "${CLAUDE_SKILL_DIR}/scripts/conclave-advise.ts" \
 
 Reads the question from `--question`, `--question-file`, or stdin (in that order). Outputs markdown with one section per advisor to stdout. State and audit writes happen as side effects.
 
-Run `bun skills/consult/scripts/conclave-advise.ts --help` from the repo root for the full flag list.
+Run `bun src/recipes/consult.ts --help` from the repo root for the full flag list.

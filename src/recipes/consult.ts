@@ -1,16 +1,16 @@
 #!/usr/bin/env bun
 
 import { readFileSync } from "node:fs";
-import { ClaudeCliAdvisor } from "./conclave-core/adapters/claude-cli.ts";
-import { CodexExecAdvisor } from "./conclave-core/adapters/codex-exec.ts";
+import { ClaudeCliAdvisor } from "../core/adapters/claude-cli.ts";
+import { CodexExecAdvisor } from "../core/adapters/codex-exec.ts";
 import {
 	detectWorktreeRoot,
 	generateRunId,
 	loadState,
 	saveState,
 	writeRunRecord,
-} from "./conclave-core/state.ts";
-import type { Advisor, AdvisorConfig, RunRecord } from "./conclave-core/types.ts";
+} from "../core/state.ts";
+import type { Advisor, AdvisorConfig, RunRecord } from "../core/types.ts";
 
 interface CliArgs {
 	sessionId?: string;
@@ -55,12 +55,12 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function die(msg: string, code = 1): never {
-	process.stderr.write(`conclave-advise: ${msg}\n`);
+	process.stderr.write(`conclave consult: ${msg}\n`);
 	process.exit(code);
 }
 
-// Hardcoded advisor defaults for v1.0. Move to ~/.config/conclave/advisors.json
-// once there's an actual second advisor to choose between.
+// Hardcoded advisor defaults. Move to ~/.config/conclave/advisors.json when
+// the model/effort defaults need to be user-configurable per advisor.
 function defaultAdvisorConfig(id: string): AdvisorConfig {
 	if (id === "codex") {
 		return {
@@ -124,7 +124,7 @@ function formatMarkdown(record: RunRecord): string {
 }
 
 const HELP = `Usage:
-  conclave-advise.ts --session-id <id> [options]
+  consult.ts --session-id <id> [options]
 
 Reads the question from --question, --question-file, or stdin (in that order).
 
@@ -204,6 +204,6 @@ async function main() {
 }
 
 main().catch((e) => {
-	process.stderr.write(`conclave-advise: ${(e as Error).message}\n`);
+	process.stderr.write(`conclave consult: ${(e as Error).message}\n`);
 	process.exit(1);
 });

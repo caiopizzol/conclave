@@ -2,9 +2,12 @@
 name: consult
 description: Consult persistent advisor sessions on a focused question. Use when stuck, designing something non-trivial, or wanting a second opinion. Advisors keep their own session per worktree, so each consult builds on prior ones in the same Claude Code session.
 argument-hint: <your specific question>
+disable-model-invocation: true
 ---
 
-# Persistent advisory consult
+# /consult
+
+This is the `/consult` recipe of conclave — the first workflow built on the handoff console.
 
 User question: $ARGUMENTS
 
@@ -17,7 +20,7 @@ If `$ARGUMENTS` is empty or vague (one word, no specifics), ask the user what th
 Run this via the Bash tool. The heredoc preserves any quotes or shell metacharacters in the user's question literally:
 
 ```bash
-bun "${CLAUDE_SKILL_DIR}/scripts/conclave-advise.ts" \
+bun "${CLAUDE_SKILL_DIR}/scripts/consult.js" \
   --session-id "${CLAUDE_SESSION_ID}" \
   --advisors codex,claude <<'CONCLAVE_QUESTION_END_DELIMITER'
 $ARGUMENTS

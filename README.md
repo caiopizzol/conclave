@@ -2,11 +2,13 @@
 
 [![GitHub release](https://img.shields.io/github/v/release/caiopizzol/conclave)](https://github.com/caiopizzol/conclave/releases)
 
-Persistent multi-model advisors for Claude Code.
+A local console for coding-agent handoffs.
 
-Conclave lets one executor (Claude Code) consult other models that keep their own session per worktree. Each follow-up question resumes the advisor's prior context. No copy-pasting between terminals.
+Conclave is a harness. The executor stays in your existing coding agent (Claude Code). When you need another agent's perspective, conclave hands the question off to advisors and brings the response back. Each advisor's session is resumed across consults within the current Claude Code session for this worktree, so follow-up questions don't start cold. The executor verifies before acting.
 
-## What it does
+`/consult` is the first recipe shipped on the console.
+
+## What `/consult` does
 
 You're working in Claude Code. You hit something you want a second opinion on. You run:
 
@@ -14,11 +16,11 @@ You're working in Claude Code. You hit something you want a second opinion on. Y
 /consult "should this rate limiter use a token bucket or a sliding window?"
 ```
 
-Conclave asks Codex and Claude (as advisors) the question. Each advisor uses its own persistent session for this worktree, so when you follow up later in the same Claude Code session, it remembers what you discussed.
+Conclave asks Codex and Claude as advisors. Each advisor uses its own persistent session for this worktree, so when you follow up later in the same Claude Code session, it remembers what you discussed.
 
 The executor (Claude Code, you) gets back the advisors' answers and is instructed to verify each claim against the actual code before acting. No advisor advice is accepted on faith.
 
-## How it replaces multi-terminal workflows
+## What it replaces
 
 Before:
 - One terminal running Claude Code
@@ -57,21 +59,34 @@ v1 ships two:
 
 Both are invoked headlessly using each vendor's documented non-interactive mode. No scraping, no daemons, no proxies. State for advisor sessions lives at `~/.local/state/conclave/sessions/`.
 
-## What it's not
+## A console, not orchestration
 
-- Not an agent framework. The executor (Claude Code) stays in charge.
-- Not a hosted service. Conclave invokes the CLIs already on your machine.
-- Not a multi-mode product. One feature: persistent advisory.
-- Not a substitute for verification. The skill instructs the executor to verify advisor claims against current code before acting.
+Conclave is intentionally narrow. It is not:
+
+- An agent swarm or autonomous fleet
+- A dashboard or web UI
+- A model router or unified gateway
+- An "AI team" with autonomous workers
+- A consensus engine that synthesizes a final answer for you
+
+The executor stays in charge. Advisors don't talk to each other. The harness's job is to keep their sessions warm and hand off questions cleanly, while you decide what to act on.
+
+## Inspiration
+
+Inspired by [karpathy/llm-council](https://github.com/karpathy/llm-council). Conclave takes the multi-model premise and rebuilds it around *persistent native sessions* and *executor verification* instead of *consensus*. The advisors don't vote, rank each other, or synthesize a chairman's answer. They each remember this worktree, you ask narrowly, and you stay in charge.
 
 ## State and audit
 
 - Advisor sessions: `~/.local/state/conclave/sessions/{claudeSessionId}-{worktreeHash}.json` - maps the current Claude Code session and worktree to each advisor's resume ID.
 - Per-consultation audit: `~/.local/state/conclave/runs/{runId}.json` - question, advisors invoked, responses, timings, errors. Useful when an advisor returns something surprising.
 
+## What's next
+
+`/consult` is the launch recipe. The same harness can power other recipes (review, investigation, planning, etc.) on the same adapter and state primitives. They'll arrive when they earn their place.
+
 ## Advanced
 
-Architecture, adapter contract, and adding a new advisor: [docs/advanced.md](docs/advanced.md).
+Architecture, adapter contract, and adding a new advisor or recipe: [docs/advanced.md](docs/advanced.md).
 
 ## License
 
