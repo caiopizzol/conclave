@@ -1,139 +1,137 @@
 # Advanced
 
-Configuration, custom commands, and the engine's JSON contract. For the mental model, start with the [README](../README.md). For the `/converge` coordinator specifically, see [converge.md](converge.md).
-
-## Configuration
-
-`bun run register` installs a working `~/.config/conclave/tools.json` if you don't already have one. The default config enables `codex` and `claude-opus`. Other tools in the default config are disabled until you flip them on.
-
-```json
-{
-  "tools": {
-    "codex": {
-      "enabled": true,
-      "command": "codex exec --full-auto -m gpt-5.3-codex",
-      "model": "gpt-5.3-codex"
-    },
-    "claude-opus": {
-      "enabled": true,
-      "command": "CLAUDECODE=0 claude --print --model opus",
-      "extraArgs": [
-        "--mcp-config",
-        "/Users/you/.config/conclave/mcp-implementer.json",
-        "--allowedTools",
-        "mcp__browser__*,mcp__github__*"
-      ],
-      "model": "opus"
-    },
-    "gemini": {
-      "enabled": false,
-      "command": "gemini -o text"
-    }
-  }
-}
-```
-
-Any CLI that reads a prompt on stdin works. For tools that want the prompt as an argument, set `"input": "argument"`.
-
-### Tool fields
-
-| Field | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `enabled` | Yes | - | Whether to use this tool |
-| `command` | Yes | - | CLI command to run |
-| `scope` | No | all | Array of scopes: `["review"]`, `["consult"]`, or both. Omit to use for everything |
-| `input` | No | `"stdin"` | `"stdin"` (piped) or `"argument"` (appended to command) |
-| `model` | No | - | Model name (for display) |
-| `description` | No | - | Human-friendly label used in example configs |
-| `extraArgs` | No | `[]` | Extra CLI args appended before the prompt. Each element is shell-quoted individually, so use absolute paths instead of `~` or `$HOME` |
-
-### Supported CLIs
-
-| Tool | Install |
-|------|---------|
-| Codex | `npm install -g @openai/codex` |
-| Claude | Built-in with Claude Code |
-| Gemini | `npm install -g @google/gemini-cli` |
-| Qwen | `npm install -g @qwen-code/qwen-code` |
-| Mistral | `pipx install mistral-vibe` |
-| Grok | `bun add -g @vibe-kit/grok-cli` |
-| Ollama | [ollama.com/download](https://ollama.com/download) |
-
-Any CLI that reads from stdin can join the council.
-
-## Engine usage (standalone)
-
-The core engine is a shell script. It works outside Claude Code:
-
-```bash
-# Write a prompt
-echo "What are the pros and cons of server components?" > /tmp/prompt.md
-
-# Run it through your configured models
-bash ~/.claude/scripts/conclave-run.sh --scope review --prompt /tmp/prompt.md
-```
-
-Returns JSON:
-```json
-{
-  "tools_run": ["codex", "claude-opus"],
-  "results": {
-    "codex": { "model": "gpt-5.3-codex", "success": true, "output": "..." },
-    "claude-opus": { "model": "opus", "success": true, "output": "..." }
-  }
-}
-```
-
-## Create your own command
-
-Drop a file in `~/.claude/commands/my-command.md`:
-
-````markdown
----
-description: "My custom multi-model command"
-allowed-tools: Bash, Read
----
-
-# My Command
-
-```bash
-cat > /tmp/prompt.md << 'EOF'
-Your prompt here. $ARGUMENTS
-EOF
-```
-
-```bash
-bash ~/.claude/scripts/conclave-run.sh --scope my-command --prompt /tmp/prompt.md
-```
-
-Parse the JSON and present results.
-````
-
-Scope the tools you want for that command (or omit `scope` to use all):
-
-```json
-{ "codex": { "enabled": true, "scope": ["review", "consult", "my-command"] } }
-```
-
-Then: `/my-command "refactor the auth module"`
+Architecture and adapter contract for conclave. For setup and usage, see the [README](../README.md).
 
 ## Architecture
 
 ```
 conclave/
 ├── scripts/
-│   ├── conclave-run.sh              # Core engine (transport)
-│   ├── conclave-converge.sh         # /converge wrapper
-│   ├── conclave-converge.ts         # /converge coordinator (state machine)
-│   ├── register.sh
-│   └── unregister.sh
-├── docs/
-│   ├── advanced.md                  # This file
-│   └── converge.md                  # /converge design
-└── examples/
-    ├── commands/                    # /review, /consult, /converge
-    ├── agents/                      # Optional investigator agents
-    └── config/                      # tools.json, prompt templates
+│   ├── conclave-advise.ts           # CLI entry, called by the /consult skill
+│   └── conclave-core/
+│       ├── types.ts                 # Advisor interface, state shapes
+│       ├── state.ts                 # XDG state, atomic writes, run audit
+│       ├── mcp-client.ts            # Stdio MCP client (reserved for future MCP-backed adapters)
+│       └── adapters/
+│           ├── codex-exec.ts        # Codex via `codex exec resume`
+│           └── claude-cli.ts        # Claude via `claude --print --resume`
+├── examples/
+│   └── skills/consult/SKILL.md      # Claude Code skill UX layer
+└── docs/
+    └── advanced.md                  # This file
 ```
 
-The engine reads config, runs tools in parallel, returns JSON. The coordinator runs the `/converge` state machine on top of the engine. Everything in `examples/` is a starting point - fork it, change it, replace it.
+The skill is a thin UX wrapper. All orchestration is in `conclave-advise.ts`: parse args, load/save state, invoke advisors, write run audit, format markdown for the executor.
+
+## Why provider-native resume
+
+Advisors keep their own context via each vendor's documented non-interactive resume primitive:
+
+- **Codex**: `codex exec resume <SESSION_ID> --json`. The session ID comes from a `thread.started` event on the first call's JSONL stream. Persists at `~/.codex/sessions/`.
+- **Claude**: `claude --print --resume <SESSION_ID> --output-format json`. The session ID comes from the result JSON's `session_id` field. Persists via Claude Code's session store.
+
+This means conclave does not maintain its own conversation transcripts for advisors. Each advisor's history is owned by its vendor's tooling. Conclave's only state is the mapping from `{claudeSessionId, worktreeHash}` to advisor session IDs.
+
+### Why not `codex mcp-server`
+
+OpenAI documents `codex mcp-server` as an MCP-server entry point with `codex` and `codex-reply` tools. Initial design used it. Discovered mid-implementation: the `threadId` returned by `codex mcp-server` is process-bound. Each fresh server process has its own in-memory thread registry. A `threadId` minted in process A returns `Session not found` in process B, even though the rollout exists on disk.
+
+Per-invocation helpers cannot use `codex mcp-server` for persistent advisors without a long-lived daemon. `codex exec resume` reads from disk and works across processes, which is what /consult needs.
+
+`mcp-client.ts` is retained in the core for future adapters that need MCP-based transports (e.g., consuming third-party MCP servers from inside an advisor adapter).
+
+## State
+
+Two files per consultation:
+
+**Advisor session map** at `~/.local/state/conclave/sessions/{claudeSessionId}-{worktreeHash}.json`:
+
+```json
+{
+  "schema": 1,
+  "executor": { "provider": "claude-code", "sessionId": "..." },
+  "worktreeRoot": "/abs/path/to/worktree",
+  "worktreeHash": "abc123def456",
+  "cwd": "...",
+  "advisors": {
+    "codex": { "provider": "codex-exec", "threadId": "...", "model": "...", "firstSeenAt": "...", "updatedAt": "..." },
+    "claude": { "provider": "claude-cli", "sessionId": "...", "model": "...", "firstSeenAt": "...", "updatedAt": "..." }
+  },
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+The key is `{claudeSessionId, worktreeHash}` because Claude Code can resume the same session in a different cwd (e.g., across git worktrees). Hashing on `realpath(git rev-parse --show-toplevel || pwd)` prevents the same Claude session from accidentally reusing an advisor thread tied to a different repo or worktree.
+
+**Per-run audit** at `~/.local/state/conclave/runs/{runId}.json`:
+
+```json
+{
+  "schema": 1,
+  "runId": "...",
+  "startedAt": "...",
+  "finishedAt": "...",
+  "executorSessionId": "...",
+  "worktreeRoot": "...",
+  "question": "...",
+  "advisorResults": [{ "ok": true, "advisorId": "codex", "content": "...", "newSessionFields": { ... }, "durationMs": 8323 }]
+}
+```
+
+Audit logs are append-only. They exist so you can inspect what conclave actually asked, which advisor answered, how long it took, and what came back. Native session resume is continuity; the audit log is observability.
+
+## Adapter contract
+
+```ts
+interface Advisor {
+  readonly id: AdvisorId;
+  readonly config: AdvisorConfig;
+  ask(req: AskRequest, prior: AdvisorSessionState | undefined): Promise<AdvisorResponse>;
+  close?(): Promise<void>;
+}
+```
+
+`ask()` receives:
+- `req.question` - the user's question
+- `req.worktreeRoot` - absolute path the advisor should treat as its cwd
+- `req.includeFiles` - optional list of file paths the caller flagged as relevant
+- `req.includeDiff` - optional flag that uncommitted changes are relevant
+- `prior` - the advisor's prior session state for this worktree, if any
+
+Returns `AdvisorResponse`:
+- `ok` - boolean
+- `content` - the advisor's text response (markdown allowed)
+- `newSessionFields` - the new advisor session state to persist (with the vendor's session/thread ID)
+- `durationMs`, `error` - audit/telemetry
+
+The adapter is responsible for:
+1. Translating `prior?.threadId` (or `prior?.sessionId`) into the vendor's resume invocation
+2. Capturing the vendor's session ID from its first-call output
+3. Setting `cwd` on the spawned process
+4. Sandboxing/permissions appropriate to read-only consultation (codex-exec uses `--sandbox read-only`)
+
+## Adding an advisor
+
+1. Add a `ProviderId` to `types.ts`.
+2. Implement the adapter under `scripts/conclave-core/adapters/<provider>.ts`.
+3. Add a branch in `conclave-advise.ts`'s `defaultAdvisorConfig()` and `makeAdvisor()`.
+
+The interface is intentionally minimal. Resist generalizing it until you have a third concrete adapter that needs something the current shape can't express.
+
+## CLI helper
+
+`conclave-advise.ts` is the entry point the skill shells out to:
+
+```
+bun <conclave-repo>/scripts/conclave-advise.ts \
+  --session-id "$CLAUDE_SESSION_ID" \
+  --advisors codex,claude \
+  --question "..."
+```
+
+Reads the question from `--question`, `--question-file`, or stdin (in that order). Outputs markdown with one section per advisor to stdout. State and audit writes happen as side effects.
+
+The installed skill at `~/.claude/skills/consult/SKILL.md` has the absolute repo path sed-substituted in by `register.sh`. The skill is the only blessed invocation surface; there is no symlink in `~/.claude/scripts/`.
+
+Run `bun scripts/conclave-advise.ts --help` from the repo root for the full flag list.

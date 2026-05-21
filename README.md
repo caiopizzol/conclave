@@ -2,34 +2,35 @@
 
 [![GitHub release](https://img.shields.io/github/v/release/caiopizzol/conclave)](https://github.com/caiopizzol/conclave/releases)
 
-Consensus before commit.
+Persistent multi-model advisors for Claude Code.
 
-Conclave is a local multi-model CLI for developer decisions. It runs your coding tasks through more than one model, using the CLIs you already have.
+Conclave lets one executor (Claude Code) consult other models that keep their own session per worktree. Each follow-up question resumes the advisor's prior context. No copy-pasting between terminals.
 
-Compare when you want perspectives. Converge when you want them to argue.
+## What it does
 
-## Modes
+You're working in Claude Code. You hit something you want a second opinion on. You run:
 
-| Mode | What it does | When to use it |
-|------|--------------|----------------|
-| `/review` | parallel critique on a diff | before commit or PR |
-| `/consult` | parallel second opinions on a question | when stuck |
-| `/converge` | one model drafts, another challenges, a coordinator tracks issues until they resolve or hit a cap | when the plan matters |
+```
+/consult "should this rate limiter use a token bucket or a sliding window?"
+```
 
-`/review` and `/consult` **compare** - same prompt, multiple models, consensus highlighted.
+Conclave asks Codex and Claude (as advisors) the question. Each advisor uses its own persistent session for this worktree, so when you follow up later in the same Claude Code session, it remembers what you discussed.
 
-`/converge` **deliberates** - two roles (implementer and reviewer), one ledger, bounded rounds.
+The executor (Claude Code, you) gets back the advisors' answers and is instructed to verify each claim against the actual code before acting. No advisor advice is accepted on faith.
 
-## What it's not
+## How it replaces multi-terminal workflows
 
-- Not agent soup
-- Not a hosted orchestration product
-- Not an always-on framework
-- Not "ask 5 models and pray"
+Before:
+- One terminal running Claude Code
+- One running Codex
+- One running another model
+- You copy-paste questions between them, manually carrying context forward
 
-Two roles, one ledger, bounded rounds.
-
-There is no Conclave-hosted service and no Conclave proxy. Conclave invokes the CLIs already on your machine - Claude, Codex, Gemini, whatever you have - and runs locally. The underlying CLIs still call their providers' APIs; that's up to you to configure.
+After:
+- One terminal
+- `/consult` inside Claude Code
+- Advisor sessions live on disk, resumed via the vendor's native primitive (`codex exec resume`, `claude --print --resume`)
+- The executor synthesizes and verifies
 
 ## Quick start
 
@@ -39,57 +40,38 @@ cd ~/dev/conclave
 bun run register
 ```
 
-**Requires:** [bun](https://bun.sh/), [jq](https://jqlang.org/), and at least one AI CLI on your `PATH` (Claude, Codex, Gemini, ...).
-
-`/review` and `/consult` work with any one or more configured CLIs. `/converge` needs the default config's `claude-opus` and `codex` keys both enabled, because the implementer and reviewer roles are hardcoded to those keys in the MVP. Swap support is planned.
-
-## First successful run
-
-Stage a small diff, then from Claude Code:
+Then inside any Claude Code session:
 
 ```
-/review
+/consult "your specific question"
 ```
 
-Each configured model critiques the diff in parallel. Consensus items (flagged by two or more models) are marked separately. Single-model findings are more likely noise.
+**Requires:** [bun](https://bun.sh/), and the advisor CLIs you want to use on your `PATH` ([codex](https://developers.openai.com/codex), [claude](https://docs.claude.com/claude-code), or both).
 
-For a question instead of a diff:
+## Advisors
 
-```
-/consult "why is the table rendering broken?"
-```
+v1 ships two:
 
-When the plan itself matters, not just the diff:
+- **codex** - `gpt-5.3-codex` via `codex exec resume`. Persistent across processes via the rollout file at `~/.codex/sessions/`.
+- **claude** - `opus` via `claude --print --resume`. Persistent across processes via Claude Code's session store.
 
-```
-/converge "design a rate limiter for the auth endpoint"
-```
+Both are invoked headlessly using each vendor's documented non-interactive mode. No scraping, no daemons, no proxies. State for advisor sessions lives at `~/.local/state/conclave/sessions/`.
 
-`/converge` takes longer than the other two because it runs a review/revise loop. Expect 2-5 minutes. The session writes every prompt, artifact, and ledger snapshot to a temp directory so you can audit what the models actually said.
+## What it's not
 
-## When to use what
+- Not an agent framework. The executor (Claude Code) stays in charge.
+- Not a hosted service. Conclave invokes the CLIs already on your machine.
+- Not a multi-mode product. One feature: persistent advisory.
+- Not a substitute for verification. The skill instructs the executor to verify advisor claims against current code before acting.
 
-- Fast signal before a commit: `/review`
-- Quick second opinion on an approach: `/consult`
-- A plan you want models to challenge and refine: `/converge`
+## State and audit
+
+- Advisor sessions: `~/.local/state/conclave/sessions/{claudeSessionId}-{worktreeHash}.json` - maps the current Claude Code session and worktree to each advisor's resume ID.
+- Per-consultation audit: `~/.local/state/conclave/runs/{runId}.json` - question, advisors invoked, responses, timings, errors. Useful when an advisor returns something surprising.
 
 ## Advanced
 
-The engine is a shell script that reads a config, runs tools in parallel, and returns JSON. Custom commands, custom scopes, and the engine's JSON contract are covered in [docs/advanced.md](docs/advanced.md).
-
-The `/converge` coordinator has its own design document: [docs/converge.md](docs/converge.md).
-
-## Why
-
-More models does not mean better. Consensus is the signal.
-
-- One model flags an issue → might be noise.
-- Two or more models flag the same issue → probably real.
-- One model drafts and another challenges until they agree → a plan you can actually trust.
-
-Conclave does not replace your judgment. It structures the output of multiple models so disagreement becomes useful instead of overwhelming.
-
-Inspired by [LLM Council](https://github.com/karpathy/llm-council).
+Architecture, adapter contract, and adding a new advisor: [docs/advanced.md](docs/advanced.md).
 
 ## License
 

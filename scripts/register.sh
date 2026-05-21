@@ -3,34 +3,29 @@ set -e
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Create directories
-mkdir -p ~/.claude/commands ~/.claude/scripts ~/.config/conclave
+mkdir -p ~/.claude/skills/consult
 
-# Core: engine script
-ln -sf "$DIR/scripts/conclave-run.sh" ~/.claude/scripts/conclave-run.sh
+# The skill is the only invocation surface. It calls the helper directly at
+# the repo path (sed-substituted below), so there's no symlink in ~/.claude/scripts.
+sed "s|{{CONCLAVE_REPO}}|$DIR|g" "$DIR/examples/skills/consult/SKILL.md" \
+	> ~/.claude/skills/consult/SKILL.md
 
-# Coordinator for stateful commands (e.g. /converge)
-ln -sf "$DIR/scripts/conclave-converge.sh" ~/.claude/scripts/conclave-converge.sh
-ln -sf "$DIR/scripts/conclave-converge.ts" ~/.claude/scripts/conclave-converge.ts
-chmod +x "$DIR/scripts/conclave-converge.sh" 2>/dev/null || true
-
-# Examples: commands
-ln -sf "$DIR/examples/commands/review.md" ~/.claude/commands/review.md
-ln -sf "$DIR/examples/commands/consult.md" ~/.claude/commands/consult.md
-ln -sf "$DIR/examples/commands/converge.md" ~/.claude/commands/converge.md
-
-# Config (copy only if not already present)
-cp -n "$DIR/examples/config/tools.json" ~/.config/conclave/tools.json 2>/dev/null || true
-cp -n "$DIR/examples/config/prompt.md" ~/.config/conclave/prompt.md 2>/dev/null || true
-cp -n "$DIR/examples/config/consult-prompt.md" ~/.config/conclave/consult-prompt.md 2>/dev/null || true
-
-# Clean up old agent from previous versions
+# Remove anything from older conclave installs.
+rm -f ~/.claude/commands/consult.md
+rm -f ~/.claude/commands/review.md
+rm -f ~/.claude/commands/converge.md
+rm -f ~/.claude/scripts/conclave-advise.ts
+rm -f ~/.claude/scripts/conclave-run.sh
+rm -f ~/.claude/scripts/conclave-converge.sh
+rm -f ~/.claude/scripts/conclave-converge.ts
+rm -f ~/.claude/agents/correctness-investigator.md
+rm -f ~/.claude/agents/dx-investigator.md
+rm -f ~/.claude/agents/test-investigator.md
+rm -f ~/.claude/agents/multi-model-executor.md
 rm -f ~/.claude/agents/review-investigator.md
 
 echo "⊛ conclave registered"
-echo "  engine:      ~/.claude/scripts/conclave-run.sh"
-echo "  coordinator: ~/.claude/scripts/conclave-converge.sh"
-echo "  commands:    /review, /consult, /converge"
-echo "  config:      ~/.config/conclave/"
+echo "  skill: ~/.claude/skills/consult/SKILL.md"
+echo "  state: ~/.local/state/conclave/"
 echo ""
-echo "Optional: run 'bun run register:agents' for investigator agents"
+echo "Invoke /consult \"your question\" inside Claude Code."

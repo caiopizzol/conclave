@@ -7,7 +7,6 @@ on:
     paths:
       - examples/**
       - scripts/**
-      - tests/**
       - package.json
       - .releaserc.json
 
@@ -34,8 +33,6 @@ jobs:
       - run: bun install
 
       - run: bun run check
-
-      - run: bun run test:tools
 
       - run: bun run release
         env:

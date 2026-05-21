@@ -1,27 +1,22 @@
 {
 	"name": "conclave",
 	"version": "0.14.0",
-	"description": "Multi-model consensus engine for Claude Code",
+	"description": "Persistent multi-model advisor handoff for Claude Code",
 	"scripts": {
 		"register": "bash scripts/register.sh",
-		"register:agents": "bash scripts/register-agents.sh",
 		"unregister": "bash scripts/unregister.sh",
 		"check": "biome check .",
 		"check:fix": "biome check --write .",
 		"lint": "biome lint .",
 		"prepare": "lefthook install",
-		"release": "semantic-release",
-		"test:converge": "bash tests/converge-extraargs.sh",
-		"test:tools": "bash tests/verify-tools.sh",
-		"test:live": "bash tests/cli-live.sh",
-		"test:models": "bash tests/cli-models.sh"
+		"release": "semantic-release"
 	},
 	"keywords": [
 		"ai",
 		"multi-model",
-		"consensus",
 		"claude-code",
-		"llm-council"
+		"codex",
+		"advisor"
 	],
 	"author": "",
 	"license": "MIT",
