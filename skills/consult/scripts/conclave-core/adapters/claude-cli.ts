@@ -1,10 +1,3 @@
-// scripts/conclave-core/adapters/claude-cli.ts
-// Claude advisor via `claude --print` (and `--resume <session_id>`).
-//
-// Mirrors codex-exec.ts: headless CLI invocation with native session resume.
-// Uses --output-format json (single JSON object) so we can extract the
-// session_id and result cleanly without parsing a stream.
-//
 // CLAUDECODE=0 is set in the env to prevent the spawned process from
 // detecting that it's running inside Claude Code (which would otherwise
 // trigger recursive harness behavior).

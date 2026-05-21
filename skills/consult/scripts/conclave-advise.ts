@@ -1,6 +1,4 @@
 #!/usr/bin/env bun
-// scripts/conclave-advise.ts
-// CLI entry for persistent advisor consultation. Called by the /consult skill.
 
 import { readFileSync } from "node:fs";
 import { ClaudeCliAdvisor } from "./conclave-core/adapters/claude-cli.ts";

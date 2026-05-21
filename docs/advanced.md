@@ -6,22 +6,28 @@ Architecture and adapter contract for conclave. For setup and usage, see the [RE
 
 ```
 conclave/
+├── skills/
+│   └── consult/
+│       ├── SKILL.md                 # Claude Code skill UX layer
+│       └── scripts/
+│           ├── conclave-advise.ts   # CLI entry, called by SKILL.md
+│           └── conclave-core/
+│               ├── types.ts         # Advisor interface, state shapes
+│               ├── state.ts         # XDG state, atomic writes, run audit
+│               ├── mcp-client.ts    # Stdio MCP client (reserved for future MCP-backed adapters)
+│               └── adapters/
+│                   ├── codex-exec.ts  # Codex via `codex exec resume`
+│                   └── claude-cli.ts  # Claude via `claude --print --resume`
 ├── scripts/
-│   ├── conclave-advise.ts           # CLI entry, called by the /consult skill
-│   └── conclave-core/
-│       ├── types.ts                 # Advisor interface, state shapes
-│       ├── state.ts                 # XDG state, atomic writes, run audit
-│       ├── mcp-client.ts            # Stdio MCP client (reserved for future MCP-backed adapters)
-│       └── adapters/
-│           ├── codex-exec.ts        # Codex via `codex exec resume`
-│           └── claude-cli.ts        # Claude via `claude --print --resume`
-├── examples/
-│   └── skills/consult/SKILL.md      # Claude Code skill UX layer
+│   ├── register.sh                  # Copies skills/consult/ into ~/.claude/skills/
+│   └── unregister.sh
 └── docs/
     └── advanced.md                  # This file
 ```
 
-The skill is a thin UX wrapper. All orchestration is in `conclave-advise.ts`: parse args, load/save state, invoke advisors, write run audit, format markdown for the executor.
+The skill is self-contained: `SKILL.md` invokes its bundled helper via `${CLAUDE_SKILL_DIR}/scripts/conclave-advise.ts`. `register.sh` copies the whole `skills/consult/` directory into `~/.claude/skills/consult/`. There is no path substitution and no symlink back to the repo, so the installed skill does not break if the repo moves. Re-run `bun run register` after pulling new conclave changes.
+
+All orchestration is in `conclave-advise.ts`: parse args, load/save state, invoke advisors, write run audit, format markdown for the executor.
 
 ## Why provider-native resume
 
@@ -114,7 +120,7 @@ The adapter is responsible for:
 ## Adding an advisor
 
 1. Add a `ProviderId` to `types.ts`.
-2. Implement the adapter under `scripts/conclave-core/adapters/<provider>.ts`.
+2. Implement the adapter under `skills/consult/scripts/conclave-core/adapters/<provider>.ts`.
 3. Add a branch in `conclave-advise.ts`'s `defaultAdvisorConfig()` and `makeAdvisor()`.
 
 The interface is intentionally minimal. Resist generalizing it until you have a third concrete adapter that needs something the current shape can't express.
@@ -124,7 +130,7 @@ The interface is intentionally minimal. Resist generalizing it until you have a 
 `conclave-advise.ts` is the entry point the skill shells out to:
 
 ```
-bun <conclave-repo>/scripts/conclave-advise.ts \
+bun "${CLAUDE_SKILL_DIR}/scripts/conclave-advise.ts" \
   --session-id "$CLAUDE_SESSION_ID" \
   --advisors codex,claude \
   --question "..."
@@ -132,6 +138,4 @@ bun <conclave-repo>/scripts/conclave-advise.ts \
 
 Reads the question from `--question`, `--question-file`, or stdin (in that order). Outputs markdown with one section per advisor to stdout. State and audit writes happen as side effects.
 
-The installed skill at `~/.claude/skills/consult/SKILL.md` has the absolute repo path sed-substituted in by `register.sh`. The skill is the only blessed invocation surface; there is no symlink in `~/.claude/scripts/`.
-
-Run `bun scripts/conclave-advise.ts --help` from the repo root for the full flag list.
+Run `bun skills/consult/scripts/conclave-advise.ts --help` from the repo root for the full flag list.

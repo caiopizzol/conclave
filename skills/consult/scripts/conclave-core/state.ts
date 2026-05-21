@@ -1,6 +1,3 @@
-// scripts/conclave-core/state.ts
-// State store + run audit log. Atomic writes via tmp+rename.
-
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {

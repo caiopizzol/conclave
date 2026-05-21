@@ -17,7 +17,7 @@ If `$ARGUMENTS` is empty or vague (one word, no specifics), ask the user what th
 Run this via the Bash tool. The heredoc preserves any quotes or shell metacharacters in the user's question literally:
 
 ```bash
-bun {{CONCLAVE_REPO}}/scripts/conclave-advise.ts \
+bun "${CLAUDE_SKILL_DIR}/scripts/conclave-advise.ts" \
   --session-id "${CLAUDE_SESSION_ID}" \
   --advisors codex,claude <<'CONCLAVE_QUESTION_END_DELIMITER'
 $ARGUMENTS

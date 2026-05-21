@@ -1,6 +1,3 @@
-// scripts/conclave-core/adapters/codex-exec.ts
-// Codex advisor over `codex exec` (and `codex exec resume`).
-//
 // Why not codex mcp-server: the mcp-server's threadId is process-bound. Each
 // new server process has its own in-memory registry, so a threadId minted in
 // process A cannot be resumed by process B even though the rollout exists on

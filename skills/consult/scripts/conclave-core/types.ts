@@ -1,6 +1,3 @@
-// scripts/conclave-core/types.ts
-// Shared types for the advisor adapter layer. Concrete adapters live in ./adapters/.
-
 export type AdvisorId = string;
 
 export type ProviderId =

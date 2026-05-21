@@ -3,14 +3,15 @@ set -e
 
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-mkdir -p ~/.claude/skills/consult
+mkdir -p ~/.claude/skills
 
-# The skill is the only invocation surface. It calls the helper directly at
-# the repo path (sed-substituted below), so there's no symlink in ~/.claude/scripts.
-sed "s|{{CONCLAVE_REPO}}|$DIR|g" "$DIR/examples/skills/consult/SKILL.md" \
-	> ~/.claude/skills/consult/SKILL.md
+# Replace the installed skill with the current repo copy. The skill is
+# self-contained: SKILL.md references its bundled scripts via ${CLAUDE_SKILL_DIR},
+# so the install does not depend on the repo's path on disk.
+rm -rf ~/.claude/skills/consult
+cp -R "$DIR/skills/consult" ~/.claude/skills/consult
 
-# Remove anything from older conclave installs.
+# Clean up artifacts from older conclave installs.
 rm -f ~/.claude/commands/consult.md
 rm -f ~/.claude/commands/review.md
 rm -f ~/.claude/commands/converge.md
@@ -29,3 +30,4 @@ echo "  skill: ~/.claude/skills/consult/SKILL.md"
 echo "  state: ~/.local/state/conclave/"
 echo ""
 echo "Invoke /consult \"your question\" inside Claude Code."
+echo "Re-run 'bun run register' after pulling new conclave changes."

@@ -1,6 +1,6 @@
-// scripts/conclave-core/mcp-client.ts
 // Minimal MCP client over stdio (JSON-RPC 2.0, newline-delimited).
-// Reusable for any MCP server we want to consume.
+// Reserved for adapters that need to consume external MCP servers; not used
+// by codex-exec or claude-cli, both of which speak each vendor's plain CLI.
 
 import type { Subprocess } from "bun";
 
