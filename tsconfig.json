@@ -12,6 +12,5 @@
 		"skipLibCheck": true,
 		"noFallthroughCasesInSwitch": true,
 		"types": ["bun"]
-	},
-	"include": ["scripts/**/*.ts"]
+	}
 }
