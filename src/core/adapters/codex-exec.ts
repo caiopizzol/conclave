@@ -4,6 +4,8 @@
 // disk. `codex exec resume <id>` reads from disk and works across processes,
 // which is what we need for the persistent-advisor use case.
 
+import { findSensitiveValues, sanitize } from "../sanitize.ts";
+import { advisorFingerprint } from "../state.ts";
 import type {
 	Advisor,
 	AdvisorConfig,
@@ -30,6 +32,7 @@ export class CodexExecAdvisor implements Advisor {
 
 	async ask(req: AskRequest, prior: AdvisorSessionState | undefined): Promise<AdvisorResponse> {
 		const started = Date.now();
+		const sensitive = findSensitiveValues(this.config.env);
 		try {
 			const cmd = this.buildCommand(prior);
 			const prompt = this.buildPrompt(req);
@@ -37,6 +40,7 @@ export class CodexExecAdvisor implements Advisor {
 			const proc = Bun.spawn({
 				cmd,
 				cwd: req.worktreeRoot,
+				env: { ...process.env, ...(this.config.env ?? {}) },
 				stdin: "pipe",
 				stdout: "pipe",
 				stderr: "pipe",
@@ -51,7 +55,10 @@ export class CodexExecAdvisor implements Advisor {
 			]);
 
 			if (exitCode !== 0) {
-				const tail = (stderrText || stdoutText).trim().split("\n").slice(-5).join("\n");
+				// Sanitize BEFORE slicing tail so a redacted value can't survive
+				// truncation as a partial leak.
+				const cleaned = sanitize(stderrText || stdoutText, sensitive);
+				const tail = cleaned.trim().split("\n").slice(-5).join("\n");
 				return {
 					ok: false,
 					advisorId: this.id,
@@ -85,6 +92,7 @@ export class CodexExecAdvisor implements Advisor {
 							provider: "codex-exec",
 							threadId: effectiveThreadId,
 							model: this.config.model,
+							fingerprint: advisorFingerprint(this.config),
 							firstSeenAt: prior?.firstSeenAt ?? now,
 							updatedAt: now,
 						}
@@ -97,7 +105,7 @@ export class CodexExecAdvisor implements Advisor {
 				advisorId: this.id,
 				model: this.config.model,
 				durationMs: Date.now() - started,
-				error: (e as Error).message || String(e),
+				error: sanitize((e as Error).message || String(e), sensitive),
 			};
 		}
 	}

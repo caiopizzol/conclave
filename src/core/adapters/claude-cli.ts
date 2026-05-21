@@ -1,7 +1,10 @@
 // CLAUDECODE=0 is set in the env to prevent the spawned process from
 // detecting that it's running inside Claude Code (which would otherwise
-// trigger recursive harness behavior).
+// trigger recursive harness behavior). Config-supplied env (e.g., for
+// Ollama-routed Claude CLI) is merged in after the inherited environment.
 
+import { findSensitiveValues, sanitize } from "../sanitize.ts";
+import { advisorFingerprint } from "../state.ts";
 import type {
 	Advisor,
 	AdvisorConfig,
@@ -28,6 +31,7 @@ export class ClaudeCliAdvisor implements Advisor {
 
 	async ask(req: AskRequest, prior: AdvisorSessionState | undefined): Promise<AdvisorResponse> {
 		const started = Date.now();
+		const sensitive = findSensitiveValues(this.config.env);
 		try {
 			const cmd = this.buildCommand(prior);
 			const prompt = this.buildPrompt(req);
@@ -35,7 +39,7 @@ export class ClaudeCliAdvisor implements Advisor {
 			const proc = Bun.spawn({
 				cmd,
 				cwd: req.worktreeRoot,
-				env: { ...process.env, CLAUDECODE: "0" },
+				env: { ...process.env, CLAUDECODE: "0", ...(this.config.env ?? {}) },
 				stdin: "pipe",
 				stdout: "pipe",
 				stderr: "pipe",
@@ -50,7 +54,10 @@ export class ClaudeCliAdvisor implements Advisor {
 			]);
 
 			if (exitCode !== 0) {
-				const tail = (stderrText || stdoutText).trim().split("\n").slice(-5).join("\n");
+				// Sanitize BEFORE slicing tail so a redacted value can't survive
+				// truncation as a partial leak.
+				const cleaned = sanitize(stderrText || stdoutText, sensitive);
+				const tail = cleaned.trim().split("\n").slice(-5).join("\n");
 				return {
 					ok: false,
 					advisorId: this.id,
@@ -69,7 +76,7 @@ export class ClaudeCliAdvisor implements Advisor {
 					advisorId: this.id,
 					model: this.config.model,
 					durationMs: Date.now() - started,
-					error: `claude --print output was not valid JSON: ${(e as Error).message}`,
+					error: `claude --print output was not valid JSON: ${sanitize((e as Error).message, sensitive)}`,
 				};
 			}
 
@@ -79,8 +86,10 @@ export class ClaudeCliAdvisor implements Advisor {
 					advisorId: this.id,
 					model: this.config.model,
 					durationMs: Date.now() - started,
-					error:
+					error: sanitize(
 						parsed.result ?? `claude returned non-success subtype: ${parsed.subtype ?? "unknown"}`,
+						sensitive,
+					),
 				};
 			}
 
@@ -107,6 +116,7 @@ export class ClaudeCliAdvisor implements Advisor {
 							provider: "claude-cli",
 							sessionId,
 							model: this.config.model,
+							fingerprint: advisorFingerprint(this.config),
 							firstSeenAt: prior?.firstSeenAt ?? now,
 							updatedAt: now,
 						}
@@ -119,7 +129,7 @@ export class ClaudeCliAdvisor implements Advisor {
 				advisorId: this.id,
 				model: this.config.model,
 				durationMs: Date.now() - started,
-				error: (e as Error).message || String(e),
+				error: sanitize((e as Error).message || String(e), sensitive),
 			};
 		}
 	}
@@ -127,8 +137,13 @@ export class ClaudeCliAdvisor implements Advisor {
 	private buildCommand(prior: AdvisorSessionState | undefined): string[] {
 		const base = ["claude", "--print", "--output-format", "json"];
 		if (prior?.sessionId) {
-			// Resume inherits model/settings from the original session.
 			base.push("--resume", prior.sessionId);
+			// Custom Anthropic-compatible endpoints (Ollama, etc.) require
+			// --model on every call, because resume otherwise defaults the
+			// model to claude-sonnet-* which the custom endpoint won't have.
+			if (this.config.passModelOnResume && this.config.model) {
+				base.push("--model", this.config.model);
+			}
 		} else if (this.config.model) {
 			base.push("--model", this.config.model);
 		}

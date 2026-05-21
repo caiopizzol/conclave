@@ -52,12 +52,16 @@ Then inside any Claude Code session:
 
 ## Advisors
 
-v1 ships two:
+Conclave ships two built-in advisors and loads additional advisors from `~/.config/conclave/advisors.json` if you provide one.
+
+Built-in:
 
 - **codex** - `gpt-5.3-codex` via `codex exec resume`. Persistent across processes via the rollout file at `~/.codex/sessions/`.
 - **claude** - `opus` via `claude --print --resume`. Persistent across processes via Claude Code's session store.
 
 Both are invoked headlessly using each vendor's documented non-interactive mode. No scraping, no daemons, no proxies. State for advisor sessions lives at `~/.local/state/conclave/sessions/`.
+
+User-defined advisors are added through the config file without code changes. Any provider conclave implements (currently `claude-cli`) can back a user-defined advisor with its own model and env. The canonical example: pointing claude-cli at Ollama's Anthropic-compatible endpoint to use Kimi, Qwen, or other models as advisors with the same persistent-session pattern. See [docs/advanced.md](docs/advanced.md) for the config schema and a copy-pasteable Kimi setup. Run `bun ~/.claude/skills/consult/scripts/consult.js --list-advisors` after install to see the resolved roster.
 
 ## A console, not orchestration
 

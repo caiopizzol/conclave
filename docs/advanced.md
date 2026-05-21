@@ -120,13 +120,57 @@ The adapter is responsible for:
 3. Setting `cwd` on the spawned process
 4. Sandboxing/permissions appropriate to read-only consultation (codex-exec uses `--sandbox read-only`)
 
-## Adding an advisor
+## Adding a user-defined advisor (config-only)
+
+Most new advisors don't need code. If the new advisor uses a provider that conclave already implements (currently `codex-exec` and `claude-cli`), add it through `~/.config/conclave/advisors.json`:
+
+```jsonc
+{
+  "defaultAdvisors": ["codex", "claude", "kimi"],
+  "advisors": {
+    "kimi": {
+      "provider": "claude-cli",
+      "model": "kimi-k2.6:cloud",
+      "passModelOnResume": true,
+      "description": "Kimi K2.6 via Ollama Cloud, routed through claude --print",
+      "env": {
+        "ANTHROPIC_AUTH_TOKEN": "ollama",
+        "ANTHROPIC_API_KEY": "",
+        "ANTHROPIC_BASE_URL": "http://localhost:11434"
+      }
+    }
+  }
+}
+```
+
+What that does:
+- Registers a new advisor `kimi` that uses the `claude-cli` provider with Kimi K2.6 as the model
+- Routes the spawned `claude --print` through Ollama's Anthropic-compatible endpoint via env vars
+- Adds `--model` on every resume (required for custom endpoints — the default model would 404)
+- Includes `kimi` in `/consult`'s default advisor roster alongside `codex` and `claude`
+
+Run `bun src/recipes/consult.ts --list-advisors` to see the resolved roster, including which advisors have env configured and the default roster source.
+
+Notes:
+- Built-in IDs (`codex`, `claude`) can't be redefined; only added to. If you want a Kimi-backed claude, give it a different ID.
+- The `env` values are runtime-only. They are never persisted to state files or audit logs. Values whose env-var name contains `KEY|TOKEN|SECRET|PASSWORD|AUTH` are redacted from error messages before they reach the audit log.
+- Cloud models cost real money per call. Kimi K2.6 via Ollama Cloud has been observed at ~$0.50/call with the system-prompt overhead Claude Code adds. Make these opt-in via `defaultAdvisors`; don't ship them in your shared config without thought.
+- Schema validation is strict. Unknown fields, unknown provider names, redefinition of built-in IDs, or a `defaultAdvisors` entry pointing at an unknown advisor all fail loudly at startup.
+
+## Adding a new provider (code change)
+
+If the new advisor uses a transport that doesn't exist yet (e.g., raw OpenAI Responses API, a new MCP-based provider), it needs an adapter:
 
 1. Add a `ProviderId` to `src/core/types.ts`.
-2. Implement the adapter under `src/core/adapters/<provider>.ts`.
-3. Add a branch in the recipe that uses it (e.g., `src/recipes/consult.ts`'s `defaultAdvisorConfig()` and `makeAdvisor()`).
+2. Implement the adapter under `src/core/adapters/<provider>.ts`. Honor `config.env` on spawn. Apply `sanitize()` from `src/core/sanitize.ts` to any error strings before returning them.
+3. Add the new provider to `VALID_PROVIDERS` in `src/core/config.ts`.
+4. Add a branch in the recipe that uses it (e.g., `src/recipes/consult.ts`'s `makeAdvisor()`).
 
 The interface is intentionally minimal. Resist generalizing it until you have a third concrete adapter that needs something the current shape can't express.
+
+## Advisor session fingerprinting
+
+Each persisted advisor session carries a `fingerprint` derived from `{provider, model, passModelOnResume, base-URL}` (never secrets). On resume, the recipe compares the current advisor config's fingerprint to the persisted one. If they differ — e.g., you edited Kimi's model from k2.6 to k2.7 — conclave starts a fresh session instead of resuming a mismatched one, emits a visible note in the result, and preserves the prior session mapping until the fresh call succeeds. A transient error during a fingerprint-mismatch fresh call doesn't destroy your previous session.
 
 ## Adding a recipe
 
@@ -138,7 +182,15 @@ Each recipe defines its own input shape, advisor selection, persistence mode, an
 
 ## CLI helper
 
-The `/consult` recipe entry is bundled into a single file at install time:
+The `/consult` recipe entry is bundled into a single file at install time. The shortest invocation lets the recipe pick advisors from your config's `defaultAdvisors` (or the built-in `codex,claude` if no config exists):
+
+```
+bun "${CLAUDE_SKILL_DIR}/scripts/consult.js" \
+  --session-id "$CLAUDE_SESSION_ID" \
+  --question "..."
+```
+
+To override the advisor roster for a single call, pass `--advisors`:
 
 ```
 bun "${CLAUDE_SKILL_DIR}/scripts/consult.js" \
@@ -149,4 +201,4 @@ bun "${CLAUDE_SKILL_DIR}/scripts/consult.js" \
 
 Reads the question from `--question`, `--question-file`, or stdin (in that order). Outputs markdown with one section per advisor to stdout. State and audit writes happen as side effects.
 
-Run `bun src/recipes/consult.ts --help` from the repo root for the full flag list.
+Run `bun src/recipes/consult.ts --help` from the repo root for the full flag list, or `--list-advisors` to print the resolved roster (config path, defaults, per-advisor provider/model/env/resume-policy).

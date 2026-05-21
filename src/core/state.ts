@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { ConversationState, RunRecord } from "./types.ts";
+import type { AdvisorConfig, ConversationState, RunRecord } from "./types.ts";
 
 function xdgStateHome(): string {
 	return process.env.XDG_STATE_HOME || join(homedir(), ".local/state");
@@ -48,6 +48,20 @@ export function detectWorktreeRoot(cwd: string): string {
 
 export function worktreeHash(rootPath: string): string {
 	return createHash("sha256").update(rootPath).digest("hex").slice(0, 12);
+}
+
+// Identity hash for an advisor configuration. Used to detect drift between
+// the config that minted a session and the current config. Includes only
+// non-secret runtime identity; never env values.
+export function advisorFingerprint(config: AdvisorConfig): string {
+	const baseUrl = config.env?.ANTHROPIC_BASE_URL ?? config.env?.OPENAI_BASE_URL ?? "";
+	const parts = [
+		config.provider,
+		config.model ?? "",
+		config.passModelOnResume ? "1" : "0",
+		baseUrl,
+	];
+	return createHash("sha256").update(parts.join("\x00")).digest("hex").slice(0, 16);
 }
 
 function statePath(sessionId: string, hash: string): string {

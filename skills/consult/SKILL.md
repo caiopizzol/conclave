@@ -21,13 +21,14 @@ Run this via the Bash tool. The heredoc preserves any quotes or shell metacharac
 
 ```bash
 bun "${CLAUDE_SKILL_DIR}/scripts/consult.js" \
-  --session-id "${CLAUDE_SESSION_ID}" \
-  --advisors codex,claude <<'CONCLAVE_QUESTION_END_DELIMITER'
+  --session-id "${CLAUDE_SESSION_ID}" <<'CONCLAVE_QUESTION_END_DELIMITER'
 $ARGUMENTS
 CONCLAVE_QUESTION_END_DELIMITER
 ```
 
-`--advisors` accepts a comma-separated list. v1 supports `codex` (gpt-5.3-codex via `codex exec resume`) and `claude` (opus via `claude --print --resume`). Each advisor maintains its own session per worktree, so each consult in the same Claude Code session builds on prior ones for that advisor.
+The helper picks advisors from the user's config (`~/.config/conclave/advisors.json`'s `defaultAdvisors`, or the built-in `codex,claude` if no config exists). To override for a single call, add `--advisors <comma-separated-list>`. Built-in IDs are `codex` (gpt-5.3-codex via `codex exec resume`) and `claude` (opus via `claude --print --resume`). User-defined advisors (e.g., Kimi via Ollama) are added through the config file — see conclave's `docs/advanced.md` for an example.
+
+Each advisor maintains its own session per worktree, so each consult in the same Claude Code session builds on prior ones for that advisor.
 
 Add `--include-files path/to/x.ts,path/to/y.ts` if the question depends on specific files. Add `--include-diff` if it depends on uncommitted changes.
 
