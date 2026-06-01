@@ -1,96 +1,62 @@
-<img height="200" alt="conclave-logo" src="https://github.com/user-attachments/assets/9bfb9226-fef1-45c8-bc6f-2c0aa98487c5" />
+# Conclave Is Deprecated
 
-[![GitHub release](https://img.shields.io/github/v/release/caiopizzol/conclave)](https://github.com/caiopizzol/conclave/releases)
+[![Deprecated](https://img.shields.io/badge/status-deprecated-red)](https://chit.run)
+[![Use Chit](https://img.shields.io/badge/use-chit-orange)](https://github.com/caiopizzol/chit)
 
-A local console for coding-agent handoffs.
+Conclave has been superseded by [Chit](https://chit.run).
 
-Conclave is a harness. The executor stays in your existing coding agent (Claude Code). When you need another agent's perspective, conclave hands the question off to advisors and brings the response back. Each advisor's session is resumed across consults within the current Claude Code session for this worktree, so follow-up questions don't start cold. The executor verifies before acting.
+Chit keeps the useful idea from Conclave, persistent multi-agent handoffs, but moves it into a clearer runtime: a small JSON manifest declares the agents, steps, context flow, and review points; the same manifest can run from the CLI, a Claude Code skill, MCP tools, or Studio.
 
-`/consult` is the first recipe shipped on the console.
+Use Chit for new work:
 
-## What `/consult` does
-
-You're working in Claude Code. You hit something you want a second opinion on. You run:
-
-```
-/consult "should this rate limiter use a token bucket or a sliding window?"
+```sh
+bunx @chit-run/cli --help
 ```
 
-Conclave asks Codex and Claude as advisors. Each advisor uses its own persistent session for this worktree, so when you follow up later in the same Claude Code session, it remembers what you discussed.
+Repository: <https://github.com/caiopizzol/chit>  
+Docs: <https://chit.run/docs>  
+npm: <https://www.npmjs.com/package/@chit-run/cli>
 
-The executor (Claude Code, you) gets back the advisors' answers and is instructed to verify each claim against the actual code before acting. No advisor advice is accepted on faith.
+## Migrating `/consult`
 
-## What it replaces
+If you installed Conclave's old `/consult` skill, remove it first:
 
-Before:
-- One terminal running Claude Code
-- One running Codex
-- One running another model
-- You copy-paste questions between them, manually carrying context forward
-
-After:
-- One terminal
-- `/consult` inside Claude Code
-- Advisor sessions live on disk, resumed via the vendor's native primitive (`codex exec resume`, `claude --print --resume`)
-- The executor synthesizes and verifies
-
-## Quick start
-
-```bash
+```sh
 git clone https://github.com/caiopizzol/conclave ~/dev/conclave
 cd ~/dev/conclave
-bun run register
+bun run unregister
 ```
 
-Then inside any Claude Code session:
+Then install Chit's `consult` manifest as a Claude Code skill:
 
+```sh
+git clone https://github.com/caiopizzol/chit ~/dev/chit
+cd ~/dev/chit
+bun install
+bun run cli install examples/consult.json --as claude-skill --name consult --force
 ```
-/consult "your specific question"
-```
 
-**Requires:** [bun](https://bun.sh/), and the advisor CLIs you want to use on your `PATH` ([codex](https://developers.openai.com/codex), [claude](https://docs.claude.com/claude-code), or both).
+After that, use `/consult` in Claude Code the same way conceptually: ask a focused question and verify the returned advice before acting.
 
-## Advisors
+## What Changed
 
-Conclave ships two built-in advisors and loads additional advisors from `~/.config/conclave/advisors.json` if you provide one.
+Conclave was a single-purpose handoff console centered on one Claude Code skill. Chit is the replacement runtime:
 
-Built-in:
+- `examples/consult.json` replaces Conclave's hard-coded `/consult` recipe.
+- `chit run` executes a manifest directly.
+- `chit show` inspects a manifest before running it.
+- `chit install <manifest> --as claude-skill` exposes a manifest as a Claude Code skill.
+- `chit mcp` exposes stepwise MCP tools.
+- `chit converge` provides the implement/review loop that Conclave was starting to grow toward.
 
-- **codex** - `gpt-5.3-codex` via `codex exec resume`. Persistent across processes via the rollout file at `~/.codex/sessions/`.
-- **claude** - `opus` via `claude --print --resume`. Persistent across processes via Claude Code's session store.
+## Historical Status
 
-Both are invoked headlessly using each vendor's documented non-interactive mode. No scraping, no daemons, no proxies. State for advisor sessions lives at `~/.local/state/conclave/sessions/`.
+This repository is kept only as an archive of the earlier experiment. It is not receiving new features, bug fixes, or support. The old state directories are left untouched by default:
 
-User-defined advisors are added through the config file without code changes. Any provider conclave implements (currently `claude-cli`) can back a user-defined advisor with its own model and env. The canonical example: pointing claude-cli at Ollama's Anthropic-compatible endpoint to use Kimi, Qwen, or other models as advisors with the same persistent-session pattern. See [docs/advanced.md](docs/advanced.md) for the config schema and a copy-pasteable Kimi setup. Run `bun ~/.claude/skills/consult/scripts/consult.js --list-advisors` after install to see the resolved roster.
+- Conclave state: `~/.local/state/conclave/`
+- Conclave config: `~/.config/conclave/advisors.json`
 
-## A console, not orchestration
-
-Conclave is intentionally narrow. It is not:
-
-- An agent swarm or autonomous fleet
-- A dashboard or web UI
-- A model router or unified gateway
-- An "AI team" with autonomous workers
-- A consensus engine that synthesizes a final answer for you
-
-The executor stays in charge. Advisors don't talk to each other. The harness's job is to keep their sessions warm and hand off questions cleanly, while you decide what to act on.
-
-## Inspiration
-
-Inspired by [karpathy/llm-council](https://github.com/karpathy/llm-council). Conclave takes the multi-model premise and rebuilds it around *persistent native sessions* and *executor verification* instead of *consensus*. The advisors don't vote, rank each other, or synthesize a chairman's answer. They each remember this worktree, you ask narrowly, and you stay in charge.
-
-## State and audit
-
-- Advisor sessions: `~/.local/state/conclave/sessions/{claudeSessionId}-{worktreeHash}.json` - maps the current Claude Code session and worktree to each advisor's resume ID.
-- Per-consultation audit: `~/.local/state/conclave/runs/{runId}.json` - question, advisors invoked, responses, timings, errors. Useful when an advisor returns something surprising.
-
-## What's next
-
-`/consult` is the launch recipe. The same harness can power other recipes (review, investigation, planning, etc.) on the same adapter and state primitives. They'll arrive when they earn their place.
-
-## Advanced
-
-Architecture, adapter contract, and adding a new advisor or recipe: [docs/advanced.md](docs/advanced.md).
+Chit uses its own state and config locations, so migration does not require deleting historical Conclave records.
 
 ## License
 
